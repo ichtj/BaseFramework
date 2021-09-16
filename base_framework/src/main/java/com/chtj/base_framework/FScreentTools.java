@@ -55,12 +55,15 @@ public class FScreentTools {
     public static String takeScreenshot(String fileFullPath) {
         SimpleDateFormat format = new SimpleDateFormat("yyyyMMddHHmmss");
         String fileName = format.format(new Date(System.currentTimeMillis())) + ".png";
-        if (fileFullPath == "") {
-            fileFullPath = "/sdcard/" + fileName;
-        }
         if (FCmdTools.isRoot() || FCmdTools.execCommand("mount -o rw,remount -t ext4 /system", true).result == 0) {
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
-                return FCmdTools.execCommand("/system/bin/screencap -p " + fileFullPath + fileName, true).result == 0?fileFullPath:"";
+                if (fileFullPath.equals("")) {
+                    fileFullPath = "/sdcard/" + fileName;
+                    return FCmdTools.execCommand("/system/bin/screencap -p " + fileFullPath, true).result == 0?fileFullPath:"";
+                }else{
+                    //这里是用户自定义了一个文件具体路径
+                    return FCmdTools.execCommand("/system/bin/screencap -p " + fileFullPath, true).result == 0?fileFullPath:"";
+                }
             }
         } else {
             if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.JELLY_BEAN_MR2 && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
@@ -71,10 +74,7 @@ public class FScreentTools {
                 // We need to orient the screenshot correctly (and the Surface api seems to take screenshots
                 // only in the natural orientation of the device :!)
                 mDisplay.getRealMetrics(mDisplayMetrics);
-                float[] dims =
-                        {
-                                mDisplayMetrics.widthPixels, mDisplayMetrics.heightPixels
-                        };
+                float[] dims = {mDisplayMetrics.widthPixels, mDisplayMetrics.heightPixels};
                 float degrees = getDegreesForRotation(mDisplay.getRotation());
                 boolean requiresRotation = (degrees > 0);
                 if (requiresRotation) {
@@ -102,16 +102,16 @@ public class FScreentTools {
                         ss.recycle();
                     }
                 }
-
                 // If we couldn't take the screenshot, notify the user
                 if (mScreenBitmap == null) {
                     return "";
                 }
-
                 // Optimizations
                 mScreenBitmap.setHasAlpha(false);
                 mScreenBitmap.prepareToDraw();
-
+                if (fileFullPath.equals("")) {
+                    fileFullPath = "/sdcard/" + fileName;
+                }
                 saveBitmap2file(mScreenBitmap, fileFullPath);
             }
             return fileFullPath;
