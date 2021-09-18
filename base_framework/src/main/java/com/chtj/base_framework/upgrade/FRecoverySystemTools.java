@@ -38,8 +38,6 @@ public class FRecoverySystemTools {
     public static void installPackage(Context context, File packageFile) throws IOException {
         String filename = packageFile.getCanonicalPath();
         String readFileInfo = readZipFileContent(packageFile.getAbsolutePath(), FWVERSION_CONTENT_FILE_PATH);
-        //String upFwVersion = "";
-        //Pattern pattern = Pattern.compile("([0-9a-zA-Z]+_)*V[0-9]{1,2}(\\.\\d{1,3})");//获取版本号的正则表达式
         Pattern pattern = Pattern.compile("V[0-9]{1,2}(\\.\\d{1,3})");//获取版本号的正则表达式V0.00
         Matcher matcher = pattern.matcher(readFileInfo);
         boolean matcherFind = matcher.find();
@@ -47,11 +45,14 @@ public class FRecoverySystemTools {
             String upFwVersion = matcher.group(0);
             if (upFwVersion != null && upFwVersion.length() > 0) {
                 upFwVersion = upFwVersion.replace("V", "").replace("v", "");
-                //upFwVersion = info.split("_")[2].replace("V", "");
                 String currentFwVersion = getCurrentFwVersion();
-                Log.d(TAG, "installPackage: upFwVersion=" + upFwVersion + ",currentFwVersion=" + currentFwVersion + ",readFileInfo=" + readFileInfo);
-                writeFlagCommand(filename, upFwVersion, currentFwVersion);
-                RecoverySystem.installPackage(context, packageFile);
+                if(!currentFwVersion.equals("")){
+                    Log.d(TAG, "installPackage: upFwVersion=" + upFwVersion + ",currentFwVersion=" + currentFwVersion + ",readFileInfo=" + readFileInfo);
+                    writeFlagCommand(filename, upFwVersion, currentFwVersion);
+                    RecoverySystem.installPackage(context, packageFile);
+                }else{
+                    throw new IOException("local fwVersion currentFwVersion=null");
+                }
             } else {
                 throw new IOException("ota package not exist fwVersion! upFwVersion=null");
             }
@@ -195,15 +196,18 @@ public class FRecoverySystemTools {
      */
     public static String getCurrentFwVersion() {
         String currentFwversion = Build.DISPLAY;
-        String[] versionInfo = currentFwversion.split("_");
-        String systemFwVersion = "";
-        if (versionInfo.length >= 2) {
-            systemFwVersion = versionInfo[2].
-                    replace("V", "").replace("v", "");
-        } else {
-            systemFwVersion = currentFwversion;
+        Pattern pattern = Pattern.compile("V[0-9]{1,2}(\\.\\d{1,3})");
+        Matcher matcher = pattern.matcher(currentFwversion);
+        if(matcher.find()){
+            String upFwVersion = matcher.group(0);
+            if(upFwVersion!=null&&upFwVersion.length()>0){
+                return  upFwVersion.replace("V", "").replace("v", "");
+            }else{
+                return "";
+            }
+        }else{
+            return "";
         }
-        return systemFwVersion;
     }
 
 }
