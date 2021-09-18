@@ -38,18 +38,25 @@ public class FRecoverySystemTools {
     public static void installPackage(Context context, File packageFile) throws IOException {
         String filename = packageFile.getCanonicalPath();
         String readFileInfo = readZipFileContent(packageFile.getAbsolutePath(), FWVERSION_CONTENT_FILE_PATH);
-        String upFwVersion = "";
-        Pattern pattern = Pattern.compile("([0-9a-zA-Z]+_)*V[0-9]{1,2}(\\.\\d{1,3})");//获取版本号的正则表达式
+        //String upFwVersion = "";
+        //Pattern pattern = Pattern.compile("([0-9a-zA-Z]+_)*V[0-9]{1,2}(\\.\\d{1,3})");//获取版本号的正则表达式
+        Pattern pattern = Pattern.compile("V[0-9]{1,2}(\\.\\d{1,3})");//获取版本号的正则表达式V0.00
         Matcher matcher = pattern.matcher(readFileInfo);
-        if (matcher.find()) {
-            String info = matcher.group(0);
-            upFwVersion = info.split("_")[2].replace("V", "");
-            String currentFwVersion = getCurrentFwVersion();
-            Log.d(TAG, "installPackage: upFwVersion=" + upFwVersion + ",currentFwVersion=" + currentFwVersion+",readFileInfo="+readFileInfo);
-            writeFlagCommand(filename, upFwVersion, currentFwVersion);
-            RecoverySystem.installPackage(context, packageFile);
+        boolean matcherFind = matcher.find();
+        if (matcherFind) {
+            String upFwVersion = matcher.group(0);
+            if (upFwVersion != null && upFwVersion.length() > 0) {
+                upFwVersion = upFwVersion.replace("V", "").replace("v", "");
+                //upFwVersion = info.split("_")[2].replace("V", "");
+                String currentFwVersion = getCurrentFwVersion();
+                Log.d(TAG, "installPackage: upFwVersion=" + upFwVersion + ",currentFwVersion=" + currentFwVersion + ",readFileInfo=" + readFileInfo);
+                writeFlagCommand(filename, upFwVersion, currentFwVersion);
+                RecoverySystem.installPackage(context, packageFile);
+            } else {
+                throw new IOException("ota package not exist fwVersion! upFwVersion=null");
+            }
         } else {
-            throw new IOException("ota package not exist fwVersion!");
+            throw new IOException("ota package not exist fwVersion! matcherFind=" + matcherFind);
         }
     }
 
@@ -84,7 +91,8 @@ public class FRecoverySystemTools {
 
     /**
      * 获取指定路径下压缩包中的文件 并且取到文件中的内容
-     * @param file 压缩包的路径
+     *
+     * @param file     压缩包的路径
      * @param fileName 压缩包内的文件所在路径
      * @return 文件内容
      */
@@ -190,7 +198,8 @@ public class FRecoverySystemTools {
         String[] versionInfo = currentFwversion.split("_");
         String systemFwVersion = "";
         if (versionInfo.length >= 2) {
-            systemFwVersion = versionInfo[2].replace("V", "");
+            systemFwVersion = versionInfo[2].
+                    replace("V", "").replace("v", "");
         } else {
             systemFwVersion = currentFwversion;
         }
