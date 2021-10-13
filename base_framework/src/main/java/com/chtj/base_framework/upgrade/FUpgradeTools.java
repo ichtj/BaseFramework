@@ -9,7 +9,7 @@ import com.chtj.base_framework.FBaseTools;
 import com.chtj.base_framework.FCmdTools;
 import com.chtj.base_framework.FCommonTools;
 import com.chtj.base_framework.entity.CommonValue;
-import com.chtj.base_framework.entity.InstallStatus;
+import com.chtj.base_framework.entity.UpgradeBean;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -27,71 +27,59 @@ import java.util.List;
 public class FUpgradeTools {
     private static final String TAG = "FUpgradeTools";
 
-    public interface UpgradeInterface {
-        /**
-         * 固件安装前的执行操作回调
-         *
-         * @param installStatus
-         */
-        void operating(InstallStatus installStatus);
-
-        /**
-         * 固件安装前的过程执行失败
-         */
-        void error(String errInfo);
-    }
-
     /**
      * 固件最终存放的地址
      */
     public static final String SAVA_FW_COPY_PATH = "/data/update.zip";
 
+    /*校验中*/
+    public static final int I_CHECK=0x101;
+    /*复制到system/data下*/
+    public static final int I_COPY=0x102;
+    /*安装中*/
+    public static final int I_INSTALLING=0x103;
+
     /**
      * 固件系统升级
      *
-     * @param filePath
+     * @param upBean
      */
-    public static void firmwareUpgrade(String filePath, UpgradeInterface upgradeInterface) {
-        if (OtaUpgradeThreadTools.newInstance().isTaskEnd()) {
+    public static void firmwareUpgrade(UpgradeBean upBean) {
+        if (FUpgradePool.newInstance().isTaskEnd()) {
             //判断是否有任务正在执行 有则忽略 无则向下执行
-            OtaUpgradeThreadTools.newInstance().addExecuteTask(new Runnable() {
+            FUpgradePool.newInstance().addExecuteTask(new Runnable() {
                 @Override
                 public void run() {
                     try {
-                        File file = new File(filePath);
+                        File file = new File(upBean.getFilePath());
                         if (file.exists()) {
-                            upgradeInterface.operating(InstallStatus.CHECK);
+                            upBean.getUpInterface().installStatus(I_CHECK);
                             RecoverySystem.verifyPackage(file, new RecoverySystem.ProgressListener() {
                                 @SuppressLint("WrongConstant")
                                 @Override
                                 public void onProgress(int progress) {
                                     if (progress == 100) {
-                                        Log.d(TAG, "onProgress() called with: progress = [ 100 ]");
-                                        upgradeInterface.operating(InstallStatus.COPY);
-                                        copyFile(filePath, SAVA_FW_COPY_PATH);
+                                        upBean.getUpInterface().installStatus(I_COPY);
                                         try {
-                                            upgradeInterface.operating(InstallStatus.INSTALL);
+                                            copyFile(upBean.getFilePath(), SAVA_FW_COPY_PATH);
+                                            upBean.getUpInterface().installStatus(I_INSTALLING);
                                             FRecoverySystemTools.installPackage(FBaseTools.getContext(), new File(SAVA_FW_COPY_PATH));
-                                        } catch (Exception e) {
-                                            e.printStackTrace();
-                                            upgradeInterface.error(e.getMessage());
+                                        } catch (Throwable e) {
+                                            upBean.getUpInterface().error(e.getMessage());
                                         }
                                     }
                                 }
                             }, null);
                         } else {
-                            upgradeInterface.error("Firmware does not exist");
+                            upBean.getUpInterface().error("Firmware does not exist");
                         }
                     } catch (Throwable e) {
-                        e.printStackTrace();
-                        upgradeInterface.error(e.getMessage());
-                        Log.e(TAG, "errMeg:" + e.getMessage());
+                        upBean.getUpInterface().error(e.getMessage());
                     }
                 }
             });
         } else {
-            //此处将忽略添加的任务 因为上一次的任务正在运行中 并没有结束
-            Log.d(TAG, "firmwareUpgrade: The ota upgrade task has been run, please do not repeat it!");
+            upBean.getUpInterface().warning("The ota upgrade task has been run, please do not repeat it!");
         }
     }
 
@@ -101,32 +89,27 @@ public class FUpgradeTools {
      * @param oldPath 源地址
      * @param newPath 目标地址
      */
-    private static void copyFile(String oldPath, String newPath) {
-        try {
-            //int bytesum = 0;
-            int byteread = 0;
-            File oldfile = new File(oldPath);
-            if (oldfile.exists()) { //文件存在时
-                InputStream inStream = new FileInputStream(oldPath); //读入原文件
-                FileOutputStream fs = new FileOutputStream(newPath);
-                byte[] buffer = new byte[1444];
-                while ((byteread = inStream.read(buffer)) != -1) {
-                    //bytesum += byteread;
-                    fs.write(buffer, 0, byteread);
-                }
-                Log.d(TAG, "copyFile: finsh complete!");
-                inStream.close();
-                try {
-                    Class<?> c = Class.forName("android.os.SystemProperties");
-                    Method set = c.getMethod("set", String.class, String.class);
-                    set.invoke(c, "persist.sys.firstRun", "true");
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+    private static void copyFile(String oldPath, String newPath) throws Throwable {
+        //int bytesum = 0;
+        int byteread = 0;
+        File oldfile = new File(oldPath);
+        if (oldfile.exists()) { //文件存在时
+            InputStream inStream = new FileInputStream(oldPath); //读入原文件
+            FileOutputStream fs = new FileOutputStream(newPath);
+            byte[] buffer = new byte[1444];
+            while ((byteread = inStream.read(buffer)) != -1) {
+                //bytesum += byteread;
+                fs.write(buffer, 0, byteread);
             }
-        } catch (Exception e) {
-            Log.e(TAG, "copyFile:fail" + e);
-            e.printStackTrace();
+            Log.d(TAG, "copyFile: finsh complete!");
+            inStream.close();
+            try {
+                Class<?> c = Class.forName("android.os.SystemProperties");
+                Method set = c.getMethod("set", String.class, String.class);
+                set.invoke(c, "persist.sys.firstRun", "true");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 

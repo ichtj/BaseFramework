@@ -64,7 +64,7 @@
         <!--固件升级服务-->
         <service android:name=".upgrade.FUpgradeService" />
         <!--ota升级广播 用于usb设备接入检测 升级结果回调-->
-        <receiver android:name=".upgrade.OtaUpgradeReceiver"
+        <receiver android:name=".upgrade.FUpgradeReceiver"
             android:enabled="true"
             android:exported="true">
             <intent-filter>

@@ -6,7 +6,7 @@ import android.content.Intent;
 import android.hardware.usb.UsbManager;
 import android.util.Log;
 
-public class OtaUpgradeReceiver extends BroadcastReceiver {
+public class FUpgradeReceiver extends BroadcastReceiver {
     private static final String TAG = "OtaUpgradeReceiver";
     private static final String ACTION_USB_STATE = "android.hardware.usb.action.USB_STATE";
 

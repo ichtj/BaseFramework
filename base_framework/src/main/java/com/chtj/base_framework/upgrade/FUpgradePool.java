@@ -14,8 +14,8 @@ import java.util.concurrent.TimeUnit;
  * 线程池管理 管理整个项目中所有的线程，所以不能有多个实例对象
  * @author chtj
  */
-public class OtaUpgradeThreadTools {
-    private static OtaUpgradeThreadTools sOtaUpgradeThreadTools = new OtaUpgradeThreadTools();
+public class FUpgradePool {
+    private static FUpgradePool sFUpgradePool = new FUpgradePool();
 
     /*线程池维护线程的最少数量 核心线程数*/
     private static final int SIZE_CORE_POOL = 1;
@@ -35,8 +35,8 @@ public class OtaUpgradeThreadTools {
     /**
      * 线程池单例创建方法
      */
-    public static OtaUpgradeThreadTools newInstance() {
-        return sOtaUpgradeThreadTools;
+    public static FUpgradePool newInstance() {
+        return sFUpgradePool;
     }
 
     /**
@@ -86,7 +86,7 @@ public class OtaUpgradeThreadTools {
     /**
      * 将构造方法访问修饰符设为私有，禁止任意实例化。
      */
-    private OtaUpgradeThreadTools() {
+    private FUpgradePool() {
     }
 
     public void perpare() {

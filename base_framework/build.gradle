@@ -38,6 +38,7 @@ dependencies {
     api rootProject.ext.dependencies.retrofit
     api rootProject.ext.dependencies["converter-gson"]
     api rootProject.ext.dependencies["adapter-rxjava"]
+    api rootProject.ext.dependencies["rxandroid"]
     //androidTestImplementation 'com.android.support.test:runner:1.0.2'
     //androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
 }

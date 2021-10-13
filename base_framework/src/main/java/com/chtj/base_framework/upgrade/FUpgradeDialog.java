@@ -6,8 +6,7 @@ import android.content.DialogInterface;
 import android.util.Log;
 import android.view.WindowManager;
 
-import com.chtj.base_framework.FBaseTools;
-import com.chtj.base_framework.entity.InstallStatus;
+import com.chtj.base_framework.entity.UpgradeBean;
 
 public class FUpgradeDialog {
     private static final String TAG = "FUpgradeDialog";
@@ -45,18 +44,22 @@ public class FUpgradeDialog {
             @Override
             public void onClick(DialogInterface dialogInterface, int which) {
                 Log.d(TAG, "onClick: setSingleChoiceItems selectPathInfo=" + otaPath);
-                FUpgradeTools.firmwareUpgrade(otaPath, new FUpgradeTools.UpgradeInterface() {
+                FUpgradeTools.firmwareUpgrade(new UpgradeBean(otaPath,new FUpgradeInterface() {
                     @Override
-                    public void operating(InstallStatus installStatus) {
+                    public void installStatus(int installStatus) {
                         Log.d(TAG, "operating:installStatus =" + installStatus);
                     }
 
                     @Override
-                    public void error(String errInfo) {
-                        Log.d(TAG, "operating:errInfo =" + errInfo);
-
+                    public void error(String error) {
+                        Log.d(TAG, "error:error =" + error);
                     }
-                });
+
+                    @Override
+                    public void warning(String warning) {
+                        Log.d(TAG, "warning:warning = "+warning);
+                    }
+                } ));
                 dialogInterface.dismiss();
             }
         });
