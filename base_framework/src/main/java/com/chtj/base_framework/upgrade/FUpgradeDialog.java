@@ -35,7 +35,7 @@ public class FUpgradeDialog {
             super.handleMessage(msg);
             switch (msg.what) {
                 case TASK_PROGRESS:
-                    tvResult.setTextColor(Color.BLACK);
+                    tvResult.setTextColor(Color.WHITE);
                     int installStatus = Integer.parseInt(msg.obj.toString());
                     if (installStatus == FUpgradeTools.I_CHECK) {
                         tvResult.setText("当前状态：开始检查固件");
@@ -104,6 +104,7 @@ public class FUpgradeDialog {
             @Override
             public void onClick(View v) {
                 progressBar.setVisibility(View.VISIBLE);
+                tvResult.setVisibility(View.VISIBLE);
                 Log.d(TAG, "onClick: setSingleChoiceItems selectPathInfo=" + otaPath);
                 FUpgradeTools.firmwareUpgrade(new UpgradeBean(otaPath, new FUpgradeInterface() {
                     @Override
