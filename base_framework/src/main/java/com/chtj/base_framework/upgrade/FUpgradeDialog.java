@@ -88,9 +88,24 @@ public class FUpgradeDialog {
                 dialog.dismiss();
             }
         });
-        builder.setPositiveButton("确定", new DialogInterface.OnClickListener() {
+        builder.setPositiveButton("确定",null);
+        fDialog.dialog = builder.create();
+        fDialog.dialog.setView(pbView);
+        fDialog.dialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
             @Override
-            public void onClick(DialogInterface dialogInterface, int which) {
+            public void onDismiss(DialogInterface dialog) {
+            }
+        });
+        fDialog.dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_SYSTEM_ALERT);
+        fDialog.dialog.show();
+        // dialog弹出后，点击界面其他部分dialog消失
+        fDialog.dialog.setCanceledOnTouchOutside(true);
+        fDialog.progressBar = fDialog.dialog.findViewById(R.id.pbView);
+        fDialog.tvResult = fDialog.dialog.findViewById(R.id.tvResult);
+        //防止点击AlertDialog.BUTTON_POSITIVE 后自动关闭窗口
+        fDialog.dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
                 Log.d(TAG, "onClick: setSingleChoiceItems selectPathInfo=" + otaPath);
                 FUpgradeTools.firmwareUpgrade(new UpgradeBean(otaPath, new FUpgradeInterface() {
                     @Override
@@ -122,19 +137,6 @@ public class FUpgradeDialog {
                 }));
             }
         });
-        fDialog.dialog = builder.create();
-        fDialog.dialog.setView(pbView);
-        fDialog.dialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
-            @Override
-            public void onDismiss(DialogInterface dialog) {
-            }
-        });
-        fDialog.dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_SYSTEM_ALERT);
-        fDialog.dialog.show();
-        // dialog弹出后，点击界面其他部分dialog消失
-        fDialog.dialog.setCanceledOnTouchOutside(true);
-        fDialog.progressBar = fDialog.dialog.findViewById(R.id.pbView);
-        fDialog.tvResult = fDialog.dialog.findViewById(R.id.tvResult);
     }
 
     public void dismissDialog() {
