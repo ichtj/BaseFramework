@@ -103,13 +103,14 @@ public class FUpgradeDialog {
         fDialog.dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                progressBar.setVisibility(View.VISIBLE);
                 Log.d(TAG, "onClick: setSingleChoiceItems selectPathInfo=" + otaPath);
                 FUpgradeTools.firmwareUpgrade(new UpgradeBean(otaPath, new FUpgradeInterface() {
                     @Override
                     public void installStatus(int installStatus) {
                         Log.d(TAG, "operating:installStatus =" + installStatus);
                         Message message = mHandler.obtainMessage();
-                        message.what = TASK_ERR;
+                        message.what = TASK_PROGRESS;
                         message.obj = installStatus;
                         mHandler.sendMessage(message);
                     }
