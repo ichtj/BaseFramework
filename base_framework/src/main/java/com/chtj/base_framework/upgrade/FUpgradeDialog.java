@@ -38,14 +38,11 @@ public class FUpgradeDialog {
                     tvResult.setTextColor(Color.BLACK);
                     int installStatus = Integer.parseInt(msg.obj.toString());
                     if (installStatus == FUpgradeTools.I_CHECK) {
-                        progressBar.setProgress(30);
-                        tvResult.setText("开始检查固件");
+                        tvResult.setText("当前状态：开始检查固件");
                     } else if (installStatus == FUpgradeTools.I_COPY) {
-                        progressBar.setProgress(60);
-                        tvResult.setText("开始拷贝固件");
+                        tvResult.setText("当前状态：开始拷贝固件");
                     } else if (installStatus == FUpgradeTools.I_INSTALLING) {
-                        progressBar.setProgress(100);
-                        tvResult.setText("即将进入刷机模式");
+                        tvResult.setText("当前状态：即将进入刷机模式");
                         dismissDialog();
                     }
                     break;
@@ -54,7 +51,7 @@ public class FUpgradeDialog {
                     break;
                 case TASK_ERR:
                     tvResult.setTextColor(Color.RED);
-                    tvResult.setText(msg.obj.toString());
+                    tvResult.setText("升级异常："+msg.obj.toString());
                     break;
             }
         }
