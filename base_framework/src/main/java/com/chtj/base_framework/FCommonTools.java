@@ -152,7 +152,7 @@ public class FCommonTools {
      */
 
     public static String getBasebandVersion() {
-        String version = SystemProperties.get("gsm.version.baseband", "none");
+        String version = SystemProperties.get("gsm.version.baseband", "null");
         return version;
     }
 
