@@ -1,6 +1,7 @@
 package com.chtj.base_framework.upgrade;
 
 import android.annotation.SuppressLint;
+import android.content.Intent;
 import android.os.Build;
 import android.os.RecoverySystem;
 import android.util.Log;
@@ -33,11 +34,11 @@ public class FUpgradeTools {
     public static final String SAVA_FW_COPY_PATH = "/data/update.zip";
 
     /*校验中*/
-    public static final int I_CHECK=0x101;
+    public static final int I_CHECK = 0x101;
     /*复制到system/data下*/
-    public static final int I_COPY=0x102;
+    public static final int I_COPY = 0x102;
     /*安装中*/
-    public static final int I_INSTALLING=0x103;
+    public static final int I_INSTALLING = 0x103;
 
     /**
      * 固件系统升级
@@ -45,6 +46,14 @@ public class FUpgradeTools {
      * @param upBean
      */
     public static void firmwareUpgrade(UpgradeBean upBean) {
+        if (Build.VERSION.SDK_INT >= 30) {
+            upBean.getUpInterface().installStatus(FUpgradeTools.I_CHECK);
+            Intent intent=new Intent("action.firmware.update.bypath");
+            intent.addFlags(Intent.FLAG_ACTIVITY_PREVIOUS_IS_TOP);
+            intent.putExtra("path","/sdcard/update.zip");
+            FBaseTools.getContext().sendBroadcast(intent);
+            return;
+        }
         if (FUpgradePool.newInstance().isTaskEnd()) {
             //判断是否有任务正在执行 有则忽略 无则向下执行
             FUpgradePool.newInstance().addExecuteTask(new Runnable() {

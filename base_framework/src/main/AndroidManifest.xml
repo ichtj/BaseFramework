@@ -56,6 +56,8 @@
     <!--usb相关-->
     <uses-feature android:name="android.hardware.usb.host" />
     <uses-permission android:name="android.permission.USB_PERMISSION" />
+    <!--自定义ota升级结果接收的广播-->
+    <uses-permission android:name="action.firmware.update.result" />
 
     <uses-sdk android:minSdkVersion="14" />
     <application
@@ -77,6 +79,9 @@
             <intent-filter>
                 <action android:name="android.intent.action.MEDIA_UNMOUNTED" />
                 <data android:scheme="file" />
+            </intent-filter>
+            <intent-filter android:priority="1000">
+                <action android:name="action.firmware.update.result" />
             </intent-filter>
         </receiver>
     </application>

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
+    android:sharedUserId="android.uid.system"
     package="com.zgkx.change">
     <!--网络权限-->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -29,6 +30,7 @@
     <!--文件写入读取权限-->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"/>
     <!--系统弹窗-->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.SYSTEM_OVERLAY_WINDOW" />
@@ -65,6 +67,8 @@
     <uses-permission
         android:name="android.permission.SHUTDOWN"
         tools:ignore="ProtectedPermissions" />
+    <!--自定义ota升级结果接收的广播-->
+    <uses-permission android:name="action.firmware.update.result" />
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
