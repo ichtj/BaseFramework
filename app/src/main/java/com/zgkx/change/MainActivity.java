@@ -9,6 +9,7 @@ import android.os.Handler;
 import android.util.Log;
 import android.view.View;
 
+import com.chtj.base_framework.FBaseTools;
 import com.chtj.base_framework.entity.UpgradeBean;
 import com.chtj.base_framework.upgrade.FUpgradeInterface;
 import com.chtj.base_framework.upgrade.FUpgradeTools;
@@ -23,18 +24,19 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        FBaseTools.instance().create(this.getApplication());
     }
 
     public void updateClick(View view) {
-        FUpgradeTools.firmwareUpgrade(new UpgradeBean("/sdcard/update.zip", new FUpgradeInterface() {
+        FUpgradeTools.firmwareUpgrade(new UpgradeBean("/sdcard/CloudCache/update.zip", new FUpgradeInterface() {
             @Override
             public void installStatus(int installStatus) {
-
+                Log.d(TAG, "installStatus: "+installStatus);
             }
 
             @Override
             public void error(String error) {
-
+                Log.d(TAG, "error: "+error);
             }
 
             @Override

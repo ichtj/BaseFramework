@@ -10,7 +10,7 @@ import android.util.SparseArray;
 public class FUpgradeReceiver extends BroadcastReceiver {
     private static final String TAG = "OtaUpgradeReceiver";
     private static final String ACTION_USB_STATE = "android.hardware.usb.action.USB_STATE";
-    private static final String ACTION_RESULT = "action.firmware.update.result";
+    private static final String ACTION_UPDATE_RESULT = "action.firmware.update.result";
     private static FUpgradeInterface fUpgradeInterface;
 
     private static final SparseArray<String> CODE_TO_NAME_MAP = new SparseArray<>();
@@ -81,19 +81,20 @@ public class FUpgradeReceiver extends BroadcastReceiver {
                 //Log.d(TAG, "onReceive: action=" + action + ", USB DisConnected..");
                 //Log.d(TAG, "onReceive: device DETACHED");
                 break;
-            case ACTION_RESULT:
+            case ACTION_UPDATE_RESULT:
                 int errorCode = intent.getIntExtra("errcode", -1);
                 Log.d(TAG, "onReceive: ACTION_RESULT>" + errorCode);
                 if (errorCode == 0) {
                     try {
-                        if(fUpgradeInterface!=null){
-                            fUpgradeInterface.installStatus(FUpgradeTools.I_INSTALLING);
-                        }
                         Intent rebootIntent = new Intent(Intent.ACTION_REBOOT);
                         rebootIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                         context.startActivity(rebootIntent);
                     } catch (Exception ex) {
                         Log.e(TAG, "onReceive: ", ex);
+                    }
+                }else if(errorCode==52){
+                    if(fUpgradeInterface!=null){
+                        fUpgradeInterface.installStatus(FUpgradeTools.I_INSTALLING);
                     }
                 }else{
                     if(fUpgradeInterface!=null){
