@@ -51,7 +51,7 @@ public class FUpgradeTools {
             upBean.getUpInterface().installStatus(FUpgradeTools.I_CHECK);
             Intent intent=new Intent("action.firmware.update.bypath");
             intent.addFlags(Intent.FLAG_ACTIVITY_PREVIOUS_IS_TOP);
-            intent.putExtra("path","/sdcard/update.zip");
+            intent.putExtra("path",upBean.getFilePath());
             FBaseTools.getContext().sendBroadcast(intent);
             return;
         }
