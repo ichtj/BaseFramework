@@ -10,8 +10,8 @@ import android.util.SparseArray;
 public class FUpgradeReceiver extends BroadcastReceiver {
     private static final String TAG = "OtaUpgradeReceiver";
     private static final String ACTION_USB_STATE = "android.hardware.usb.action.USB_STATE";
-    public static final String ACTION_RESULT = "action.firmware.update.result";
-    FUpgradeInterface fUpgradeInterface;
+    private static final String ACTION_RESULT = "action.firmware.update.result";
+    private static FUpgradeInterface fUpgradeInterface;
 
     private static final SparseArray<String> CODE_TO_NAME_MAP = new SparseArray<>();
 
@@ -34,8 +34,8 @@ public class FUpgradeReceiver extends BroadcastReceiver {
         CODE_TO_NAME_MAP.put(52, "UPDATED_BUT_NOT_ACTIVE");
     }
 
-    public FUpgradeReceiver(FUpgradeInterface fUpgradeInterface) {
-        this.fUpgradeInterface=fUpgradeInterface;
+    public static void setfUpgradeInterface(FUpgradeInterface upgradeInterface) {
+        fUpgradeInterface=upgradeInterface;
     }
 
     @Override
@@ -86,7 +86,9 @@ public class FUpgradeReceiver extends BroadcastReceiver {
                 Log.d(TAG, "onReceive: ACTION_RESULT>" + errorCode);
                 if (errorCode == 0) {
                     try {
-                        fUpgradeInterface.installStatus(FUpgradeTools.I_INSTALLING);
+                        if(fUpgradeInterface!=null){
+                            fUpgradeInterface.installStatus(FUpgradeTools.I_INSTALLING);
+                        }
                         Intent rebootIntent = new Intent(Intent.ACTION_REBOOT);
                         rebootIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                         context.startActivity(rebootIntent);
@@ -94,7 +96,9 @@ public class FUpgradeReceiver extends BroadcastReceiver {
                         Log.e(TAG, "onReceive: ", ex);
                     }
                 }else{
-                    fUpgradeInterface.error(getCodeName(errorCode));
+                    if(fUpgradeInterface!=null){
+                        fUpgradeInterface.error(getCodeName(errorCode));
+                    }
                 }
                 break;
         }

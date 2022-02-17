@@ -47,6 +47,7 @@ public class FUpgradeTools {
      */
     public static void firmwareUpgrade(UpgradeBean upBean) {
         if (Build.VERSION.SDK_INT >= 30) {
+            FUpgradeReceiver.setfUpgradeInterface(upBean.getUpInterface());
             upBean.getUpInterface().installStatus(FUpgradeTools.I_CHECK);
             Intent intent=new Intent("action.firmware.update.bypath");
             intent.addFlags(Intent.FLAG_ACTIVITY_PREVIOUS_IS_TOP);
