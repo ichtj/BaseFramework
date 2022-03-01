@@ -83,23 +83,39 @@ public class FUpgradeService extends Service {
                 FUpgradeDialog.instance().dismissDialog();
                 break;
             case "reboot":
-                //获取cache/recovery/last_install文件
-                String upLastInstall = FRecoverySystemTools.readLastInstallCommand();
-                //获取cache/recovery/last_flag文件
-                String upLastUpdate = FRecoverySystemTools.readLastUpdateCommand();
-                Log.d(TAG, "onStartCommand: upLastInstall=" + upLastInstall + ",upLastUpdate=" + upLastUpdate);
-                if (upLastInstall != null && upLastUpdate != null) {
-                    String[] lastInstallResult = upLastInstall.split("\n");
-                    String[] lastFlagResult = upLastUpdate.split(";");
-                    if (lastInstallResult.length > 1 && lastFlagResult.length == 4) {
-                        String currentVersion = FRecoverySystemTools.getCurrentFwVersion();
-                        if (lastInstallResult[1].equals("1") && lastFlagResult[3].equals(currentVersion)) {
+                if(Build.VERSION.SDK_INT>=30){
+                    String[] upDownVersion=FUpgradeTools.readFileData("/data/misc/.update").split(";");
+                    if(upDownVersion.length>1){
+                        int checkVersion=FUpgradeTools.compareVersion(upDownVersion[0],upDownVersion[1]);
+                        if(checkVersion==1){
                             sendCompleteReceiver();
-                        } else {
-                            sendErrReceiver("last_install !=1 or currentFwVersion!=upFwVersion");
+                        }else if(checkVersion==0){
+                            sendErrReceiver("Update. zip firmware version Consistent with the current version");
+                        }else{
+                            sendErrReceiver("Update. zip firmware version is smaller than the current version");
                         }
-                    } else {
-                        sendErrReceiver("last_install file  and last_update file err 0");
+                    }else{
+                        sendErrReceiver("Update. zip and the current version are not recorded");
+                    }
+                }else{
+                    //获取cache/recovery/last_install文件
+                    String upLastInstall = FRecoverySystemTools.readLastInstallCommand();
+                    //获取cache/recovery/last_flag文件
+                    String upLastUpdate = FRecoverySystemTools.readLastUpdateCommand();
+                    Log.d(TAG, "onStartCommand: upLastInstall=" + upLastInstall + ",upLastUpdate=" + upLastUpdate);
+                    if (upLastInstall != null && upLastUpdate != null) {
+                        String[] lastInstallResult = upLastInstall.split("\n");
+                        String[] lastFlagResult = upLastUpdate.split(";");
+                        if (lastInstallResult.length > 1 && lastFlagResult.length == 4) {
+                            String currentVersion = FRecoverySystemTools.getCurrentFwVersion();
+                            if (lastInstallResult[1].equals("1") && lastFlagResult[3].equals(currentVersion)) {
+                                sendCompleteReceiver();
+                            } else {
+                                sendErrReceiver("last_install !=1 or currentFwVersion!=upFwVersion");
+                            }
+                        } else {
+                            sendErrReceiver("last_install file  and last_update file err 0");
+                        }
                     }
                 }
                 break;

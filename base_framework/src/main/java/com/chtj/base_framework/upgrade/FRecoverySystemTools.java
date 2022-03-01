@@ -13,6 +13,7 @@ import android.util.Log;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -89,6 +90,7 @@ public class FRecoverySystemTools {
         }
         return "";
     }
+
 
     /**
      * 获取指定路径下压缩包中的文件 并且取到文件中的内容
