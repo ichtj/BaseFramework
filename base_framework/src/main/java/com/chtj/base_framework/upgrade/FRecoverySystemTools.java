@@ -50,6 +50,10 @@ public class FRecoverySystemTools {
                 if(!currentFwVersion.equals("")){
                     Log.d(TAG, "installPackage: upFwVersion=" + upFwVersion + ",currentFwVersion=" + currentFwVersion + ",readFileInfo=" + readFileInfo);
                     writeFlagCommand(filename, upFwVersion, currentFwVersion);
+                    File file=new File("/data/misc/app_flag.txt");
+                    if(file.exists()){
+                        file.delete();
+                    }
                     RecoverySystem.installPackage(context, packageFile);
                 }else{
                     throw new IOException("local fwVersion currentFwVersion=null");
