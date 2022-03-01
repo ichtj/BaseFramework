@@ -28,6 +28,7 @@ public class FUpgradeService extends Service {
                     Intent updateIntent = new Intent(ACTION_UPDATE_RESULT);
                     updateIntent.putExtra("isComplete", true);
                     updateIntent.putExtra("errMeg", "");
+                    updateIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                     sendBroadcast(updateIntent);
                     Log.d(TAG, "onCreate: ota update successful!");
                     deleteUpdateReocrd();
@@ -36,6 +37,7 @@ public class FUpgradeService extends Service {
                     Intent errIntent = new Intent(ACTION_UPDATE_RESULT);
                     errIntent.putExtra("isComplete", false);
                     errIntent.putExtra("errMeg", msg.obj.toString());
+                    errIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                     sendBroadcast(errIntent);
                     Log.d(TAG, "onCreate: ota update failed! errMeg=" + msg.obj.toString());
                     deleteUpdateReocrd();
@@ -51,8 +53,12 @@ public class FUpgradeService extends Service {
         try {
             new File("/data/update.zip").delete();
         } catch (Exception e) {
-            e.printStackTrace();
-            Log.e(TAG, "errMeg:" + e.getMessage());
+            Log.e(TAG, "errMeg1:" ,e);
+        }
+        try {
+            new File("/data/misc/.update").delete();
+        }catch (Exception e){
+            Log.e(TAG,"errMeg2:",e);
         }
     }
 
