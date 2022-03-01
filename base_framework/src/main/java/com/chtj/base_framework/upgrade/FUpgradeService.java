@@ -93,12 +93,12 @@ public class FUpgradeService extends Service {
                         if(checkVersion==1){
                             sendCompleteReceiver();
                         }else if(checkVersion==0){
-                            sendErrReceiver("Update. zip firmware version Consistent with the current version");
+                            sendErrReceiver("Same firmware version");
                         }else{
-                            sendErrReceiver("Update. zip firmware version is smaller than the current version");
+                            sendErrReceiver("Update.zip Low version");
                         }
                     }else{
-                        sendErrReceiver("Update. zip and the current version are not recorded");
+                        sendErrReceiver("firmware version not recorded");
                     }
                 }else{
                     //获取cache/recovery/last_install文件
@@ -117,7 +117,7 @@ public class FUpgradeService extends Service {
                                 sendErrReceiver("last_install !=1 or currentFwVersion!=upFwVersion");
                             }
                         } else {
-                            sendErrReceiver("last_install file  and last_update file err 0");
+                            sendErrReceiver("last_install file and last_update file err 0");
                         }
                     }
                 }
