@@ -23,26 +23,23 @@ public class FUpgradeService extends Service {
         @Override
         public void handleMessage(Message msg) {
             super.handleMessage(msg);
+            Intent updateIntent = new Intent(ACTION_UPDATE_RESULT);
             switch (msg.what) {
                 case OK_RESULT://发送升级成功的广播
-                    Intent updateIntent = new Intent(ACTION_UPDATE_RESULT);
                     updateIntent.putExtra("isComplete", true);
                     updateIntent.putExtra("errMeg", "");
-                    updateIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    sendBroadcast(updateIntent);
                     Log.d(TAG, "onCreate: ota update successful!");
-                    deleteUpdateReocrd();
                     break;
                 case ERR_RESULT://发送升级失败的广播
-                    Intent errIntent = new Intent(ACTION_UPDATE_RESULT);
-                    errIntent.putExtra("isComplete", false);
-                    errIntent.putExtra("errMeg", msg.obj.toString());
-                    errIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    sendBroadcast(errIntent);
+                    updateIntent.putExtra("isComplete", false);
+                    updateIntent.putExtra("errMeg", msg.obj.toString());
                     Log.d(TAG, "onCreate: ota update failed! errMeg=" + msg.obj.toString());
-                    deleteUpdateReocrd();
                     break;
             }
+            updateIntent.setPackage(getPackageName());
+            updateIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            sendBroadcast(updateIntent);
+            deleteUpdateReocrd();
         }
     };
 
