@@ -108,7 +108,11 @@ public class FStorageTools {
             FCmdTools.CommandResult commandResult = null;
             int sdk = Build.VERSION.SDK_INT;
             if (sdk >= 24) {
-                commandResult = FCmdTools.execCommand("df | grep -rn /mnt/media_rw", true);
+                String appStr="-rn";
+                if(sdk>=30){
+                    appStr="";
+                }
+                commandResult = FCmdTools.execCommand("df | grep "+appStr+" /mnt/media_rw", true);
                 if (commandResult.successMsg != null && commandResult.successMsg.length() > 0) {
                     String[] result = commandResult.successMsg.substring(4).trim().replaceAll("\\s+", " ").split(" ");
                     return new Space(Integer.valueOf(result[2])/1024, Integer.valueOf(result[3])/1024, Integer.valueOf(result[4])/1024);
