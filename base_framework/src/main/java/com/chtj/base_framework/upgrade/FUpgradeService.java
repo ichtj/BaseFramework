@@ -97,8 +97,6 @@ public class FUpgradeService extends Service {
                         }else{
                             sendErrReceiver("Update.zip Low version");
                         }
-                    }else{
-                        sendErrReceiver("firmware version not recorded");
                     }
                 }else{
                     //获取cache/recovery/last_install文件
