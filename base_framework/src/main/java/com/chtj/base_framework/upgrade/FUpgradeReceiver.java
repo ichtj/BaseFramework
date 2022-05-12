@@ -64,7 +64,7 @@ public class FUpgradeReceiver extends BroadcastReceiver {
                 Log.d(TAG, "onReceive: ACTION_RESULT>" + errorCode);
                 if (errorCode == FUpgradeTools.I_CHECK||errorCode==FUpgradeTools.I_COPY||errorCode==FUpgradeTools.I_INSTALLING) {
                     if(fUpgradeInterface!=null) {
-                        fUpgradeInterface.installStatus(FUpgradeTools.I_CHECK);
+                        fUpgradeInterface.installStatus(errorCode);
                     }
                 }else{
                     if(fUpgradeInterface!=null){
