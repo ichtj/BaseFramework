@@ -12,28 +12,6 @@ public class FUpgradeReceiver extends BroadcastReceiver {
     private static final String ACTION_USB_STATE = "android.hardware.usb.action.USB_STATE";
     private static final String ACTION_UPDATE_RESULT = "action.firmware.update.result";
     private static FUpgradeInterface fUpgradeInterface;
-
-    private static final SparseArray<String> CODE_TO_NAME_MAP = new SparseArray<>();
-
-    static {
-        CODE_TO_NAME_MAP.put(0, "SUCCESS");
-        CODE_TO_NAME_MAP.put(1, "ERROR");
-        CODE_TO_NAME_MAP.put(4, "FILESYSTEM_COPIER_ERROR");
-        CODE_TO_NAME_MAP.put(5, "POST_INSTALL_RUNNER_ERROR");
-        CODE_TO_NAME_MAP.put(6, "PAYLOAD_MISMATCHED_TYPE_ERROR");
-        CODE_TO_NAME_MAP.put(7, "INSTALL_DEVICE_OPEN_ERROR");
-        CODE_TO_NAME_MAP.put(8, "KERNEL_DEVICE_OPEN_ERROR");
-        CODE_TO_NAME_MAP.put(9, "DOWNLOAD_TRANSFER_ERROR");
-        CODE_TO_NAME_MAP.put(10, "PAYLOAD_HASH_MISMATCH_ERROR");
-        CODE_TO_NAME_MAP.put(11, "PAYLOAD_SIZE_MISMATCH_ERROR");
-        CODE_TO_NAME_MAP.put(12, "DOWNLOAD_PAYLOAD_VERIFICATION_ERROR");
-        CODE_TO_NAME_MAP.put(15, "NEW_ROOTFS_VERIFICATION_ERROR");
-        CODE_TO_NAME_MAP.put(20, "DOWNLOAD_STATE_INITIALIZATION_ERROR");
-        CODE_TO_NAME_MAP.put(26, "DOWNLOAD_METADATA_SIGNATURE_MISMATCH");
-        CODE_TO_NAME_MAP.put(48, "USER_CANCELLED");
-        CODE_TO_NAME_MAP.put(52, "UPDATED_BUT_NOT_ACTIVE");
-    }
-
     public static void setfUpgradeInterface(FUpgradeInterface upgradeInterface) {
         fUpgradeInterface=upgradeInterface;
     }
@@ -82,33 +60,19 @@ public class FUpgradeReceiver extends BroadcastReceiver {
                 //Log.d(TAG, "onReceive: device DETACHED");
                 break;
             case ACTION_UPDATE_RESULT:
-                int errorCode = intent.getIntExtra("errcode", -1);
+                int errorCode = intent.getIntExtra("statusCode", -1);
                 Log.d(TAG, "onReceive: ACTION_RESULT>" + errorCode);
-                if (errorCode == 0) {
-                    try {
-                        Intent rebootIntent = new Intent(Intent.ACTION_REBOOT);
-                        rebootIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                        context.startActivity(rebootIntent);
-                    } catch (Exception ex) {
-                        Log.e(TAG, "onReceive: ", ex);
-                    }
-                }else if(errorCode==52){
-                    if(fUpgradeInterface!=null){
-                        fUpgradeInterface.installStatus(FUpgradeTools.I_INSTALLING);
+                if (errorCode == FUpgradeTools.I_CHECK||errorCode==FUpgradeTools.I_COPY||errorCode==FUpgradeTools.I_INSTALLING) {
+                    if(fUpgradeInterface!=null) {
+                        fUpgradeInterface.installStatus(FUpgradeTools.I_CHECK);
                     }
                 }else{
                     if(fUpgradeInterface!=null){
-                        fUpgradeInterface.error(getCodeName(errorCode));
+                        String statusStr = intent.getStringExtra("statusStr");
+                        fUpgradeInterface.error(statusStr);
                     }
                 }
                 break;
         }
-    }
-
-    /**
-     * converts error code to error name
-     */
-    public static String getCodeName(int errorCode) {
-        return CODE_TO_NAME_MAP.get(errorCode);
     }
 }
