@@ -4,24 +4,23 @@ import android.content.Context;
 import android.telephony.PhoneStateListener;
 import android.telephony.SignalStrength;
 import android.telephony.TelephonyManager;
-import android.util.Log;
 
 import com.chtj.base_framework.FBaseTools;
 
 import java.lang.reflect.Method;
 
 public class FLteTools {
-    private static final String TAG = "FLteTools";
     private static FLteTools sInstance;
-    PhoneStateListener phoneStateListener;
-    TelephonyManager tm;
+    private PhoneStateListener phoneStateListener;
+    private TelephonyManager tm;
+    private SignalStrength signalStrength;
 
     /**
      * 单例模式
      *
      * @return
      */
-    public static FLteTools instance() {
+    private static FLteTools instance() {
         if (sInstance == null) {
             synchronized (FLteTools.class) {
                 if (sInstance == null) {
@@ -32,38 +31,13 @@ public class FLteTools {
         return sInstance;
     }
 
-    /**
-     * 获取4G信号
-     * 这里说的大于>-90 是指越接近正数信号越好
-     * @param netDbmListener
-     */
-    public void init4GDbm(NetDbmListener netDbmListener) {
+    public FLteTools() {
         tm = (TelephonyManager) FBaseTools.getContext().getSystemService(Context.TELEPHONY_SERVICE);
         phoneStateListener = new PhoneStateListener() {
             @Override
             public void onSignalStrengthsChanged(SignalStrength signalStrength) {
                 super.onSignalStrengthsChanged(signalStrength);
-                String dbmAsu = 0 + " dBm " + 0 + " asu";
-                try {
-                    Method method1 = signalStrength.getClass().getMethod("getDbm");
-                    int signalDbm = (int) method1.invoke(signalStrength);
-                    method1 = signalStrength.getClass().getMethod("getAsuLevel");
-                    int signalAsu = (int) method1.invoke(signalStrength);
-                    if (-1 == signalDbm) {
-                        signalDbm = 0;
-                    }
-                    if (-1 == signalAsu) {
-                        signalAsu = 0;
-                    }
-                    dbmAsu = signalDbm + " dBm " + signalAsu + " asu";
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    Log.e(TAG, "errMeg:" + e.getMessage());
-                    dbmAsu = 0 + " dBm " + 0 + " asu";
-                }
-                if (netDbmListener != null) {
-                    netDbmListener.getDbm(dbmAsu);
-                }
+                instance().signalStrength = signalStrength;
             }
         };
         tm.listen(phoneStateListener, PhoneStateListener.LISTEN_DATA_CONNECTION_STATE
@@ -72,13 +46,37 @@ public class FLteTools {
     }
 
     /**
-     * 关闭4G信号监听
+     * 获取dbm
+     * @return
      */
-    public void cancelTelephonyListener() {
-        tm.listen(phoneStateListener,
-                PhoneStateListener.LISTEN_NONE);
-        tm = null;
-        phoneStateListener = null;
+    public static String getDbm() {
+        String dbmAsu = 0 + " dBm " + 0 + " asu";
+        try {
+            Method method1 = instance().signalStrength.getClass().getMethod("getDbm");
+            int signalDbm = (int) method1.invoke(instance().signalStrength);
+            method1 = instance().signalStrength.getClass().getMethod("getAsuLevel");
+            int signalAsu = (int) method1.invoke(instance().signalStrength);
+            if (-1 == signalDbm) {
+                signalDbm = 0;
+            }
+            if (-1 == signalAsu) {
+                signalAsu = 0;
+            }
+            dbmAsu = signalDbm + " dBm " + signalAsu + " asu";
+        } catch (Exception e) {
+            e.printStackTrace();
+            dbmAsu = 0 + " dBm " + 0 + " asu";
+        }
+        return dbmAsu;
     }
 
+    /**
+     * 关闭4G信号监听
+     */
+    public static void cancelTelephonyListener() {
+        instance().tm.listen(instance().phoneStateListener,
+                PhoneStateListener.LISTEN_NONE);
+        instance().tm = null;
+        instance().phoneStateListener = null;
+    }
 }

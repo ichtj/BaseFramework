@@ -6,6 +6,7 @@ import android.Manifest;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Display;
 import android.view.View;
 import android.widget.Toast;
 
@@ -29,6 +30,7 @@ public class MainActivity extends AppCompatActivity {
                 .addPermission(Manifest.permission.MANAGE_EXTERNAL_STORAGE)
                 .initPermission();
         startService(new Intent(this, MyService.class));
+        
     }
 
 
