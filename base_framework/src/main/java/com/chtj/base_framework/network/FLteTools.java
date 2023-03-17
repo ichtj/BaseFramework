@@ -10,7 +10,7 @@ import com.chtj.base_framework.FBaseTools;
 import java.lang.reflect.Method;
 
 public class FLteTools {
-    private static FLteTools sInstance;
+    private static volatile FLteTools sInstance;
     private PhoneStateListener phoneStateListener;
     private TelephonyManager tm;
     private SignalStrength signalStrength;
@@ -20,7 +20,7 @@ public class FLteTools {
      *
      * @return
      */
-    private static FLteTools instance() {
+    public static FLteTools instance() {
         if (sInstance == null) {
             synchronized (FLteTools.class) {
                 if (sInstance == null) {
@@ -32,15 +32,15 @@ public class FLteTools {
     }
 
     public FLteTools() {
-        tm = (TelephonyManager) FBaseTools.getContext().getSystemService(Context.TELEPHONY_SERVICE);
-        phoneStateListener = new PhoneStateListener() {
+        instance().tm = (TelephonyManager) FBaseTools.getContext().getSystemService(Context.TELEPHONY_SERVICE);
+        instance().phoneStateListener = new PhoneStateListener() {
             @Override
             public void onSignalStrengthsChanged(SignalStrength signalStrength) {
                 super.onSignalStrengthsChanged(signalStrength);
                 instance().signalStrength = signalStrength;
             }
         };
-        tm.listen(phoneStateListener, PhoneStateListener.LISTEN_DATA_CONNECTION_STATE
+        instance().tm.listen(instance().phoneStateListener, PhoneStateListener.LISTEN_DATA_CONNECTION_STATE
                 | PhoneStateListener.LISTEN_SIGNAL_STRENGTHS
                 | PhoneStateListener.LISTEN_SERVICE_STATE);
     }
@@ -49,7 +49,7 @@ public class FLteTools {
      * 获取dbm
      * @return
      */
-    public static String getDbm() {
+    public String getDbm() {
         String dbmAsu = 0 + " dBm " + 0 + " asu";
         try {
             Method method1 = instance().signalStrength.getClass().getMethod("getDbm");
