@@ -20,7 +20,7 @@ public class FLteTools {
      *
      * @return
      */
-    public static FLteTools instance() {
+    private static FLteTools instance() {
         if (sInstance == null) {
             synchronized (FLteTools.class) {
                 if (sInstance == null) {
@@ -31,7 +31,7 @@ public class FLteTools {
         return sInstance;
     }
 
-    public FLteTools() {
+    public static void init() {
         instance().tm = (TelephonyManager) FBaseTools.getContext().getSystemService(Context.TELEPHONY_SERVICE);
         instance().phoneStateListener = new PhoneStateListener() {
             @Override
@@ -49,7 +49,7 @@ public class FLteTools {
      * 获取dbm
      * @return
      */
-    public String getDbm() {
+    public static String getDbm() {
         String dbmAsu = 0 + " dBm " + 0 + " asu";
         try {
             Method method1 = instance().signalStrength.getClass().getMethod("getDbm");
@@ -73,10 +73,12 @@ public class FLteTools {
     /**
      * 关闭4G信号监听
      */
-    public static void cancelTelephonyListener() {
-        instance().tm.listen(instance().phoneStateListener,
-                PhoneStateListener.LISTEN_NONE);
-        instance().tm = null;
+    public static void cancel() {
+        if(instance().tm!=null){
+            instance().tm.listen(instance().phoneStateListener,
+                    PhoneStateListener.LISTEN_NONE);
+            instance().tm = null;
+        }
         instance().phoneStateListener = null;
     }
 }

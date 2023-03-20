@@ -12,6 +12,7 @@ import android.widget.Toast;
 
 import com.chtj.base_framework.FBaseTools;
 import com.chtj.base_framework.entity.UpgradeBean;
+import com.chtj.base_framework.network.FLteTools;
 import com.chtj.base_framework.upgrade.FUpgradeInterface;
 import com.chtj.base_framework.upgrade.FUpgradeTools;
 import com.zgkx.change.test.ShellUtils;
@@ -30,7 +31,7 @@ public class MainActivity extends AppCompatActivity {
                 .addPermission(Manifest.permission.MANAGE_EXTERNAL_STORAGE)
                 .initPermission();
         startService(new Intent(this, MyService.class));
-        
+        FLteTools.init();
     }
 
 
@@ -51,5 +52,16 @@ public class MainActivity extends AppCompatActivity {
                 Log.d(TAG, "warning: "+warning);
             }
         }));
+    }
+
+
+    public void getdbmClick(View view) {
+        Toast.makeText(this,"dbm:"+FLteTools.getDbm(),Toast.LENGTH_LONG).show();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        FLteTools.cancel();
     }
 }
