@@ -30,13 +30,17 @@ public class FEthTools {
      * 开启以太网
      */
     public static void openEth() {
-        int sdk = Build.VERSION.SDK_INT;
-        if (sdk >= 24) {
-            android.net.EthernetManager mEthManager = (android.net.EthernetManager) FBaseTools.getContext().getSystemService("ethernet");
-            mEthManager.setEthernetEnabled(true);
-        } else {
-            android.net.ethernet.EthernetManager ethernetManager = EthernetManager.getInstance();
-            ethernetManager.setEnabled(true);
+        try {
+            int sdk = Build.VERSION.SDK_INT;
+            if (sdk >= 24) {
+                android.net.EthernetManager mEthManager = (android.net.EthernetManager) FBaseTools.getContext().getSystemService("ethernet");
+                mEthManager.setEthernetEnabled(true);
+            } else {
+                android.net.ethernet.EthernetManager ethernetManager = EthernetManager.getInstance();
+                ethernetManager.setEnabled(true);
+            }
+        }catch (Throwable throwable){
+            Log.e(TAG, "closeEth: ", throwable);
         }
     }
 
@@ -44,13 +48,17 @@ public class FEthTools {
      * 关闭以太网
      */
     public static void closeEth() {
-        int sdk = Build.VERSION.SDK_INT;
-        if (sdk >= 24) {
-            android.net.EthernetManager mEthManager = (android.net.EthernetManager) FBaseTools.getContext().getSystemService("ethernet");
-            mEthManager.setEthernetEnabled(false);
-        } else {
-            android.net.ethernet.EthernetManager ethernetManager = EthernetManager.getInstance();
-            ethernetManager.setEnabled(false);
+        try {
+            int sdk = Build.VERSION.SDK_INT;
+            if (sdk >= 24) {
+                android.net.EthernetManager mEthManager = (android.net.EthernetManager) FBaseTools.getContext().getSystemService("ethernet");
+                mEthManager.setEthernetEnabled(false);
+            } else {
+                android.net.ethernet.EthernetManager ethernetManager = EthernetManager.getInstance();
+                ethernetManager.setEnabled(false);
+            }
+        }catch (Throwable throwable){
+            Log.e(TAG, "closeEth: ", throwable);
         }
     }
 
@@ -59,30 +67,35 @@ public class FEthTools {
      * 获取ip模式
      */
     public static String getIpMode(Context context) {
-        int sdk = Build.VERSION.SDK_INT;
-        if (sdk >= 24) {
+        try {
             String ipMode = "NONE";
-            android.net.EthernetManager mEthManager = (android.net.EthernetManager) context.getSystemService("ethernet");
-            boolean useDhcp = (mEthManager.getConfiguration().ipAssignment == IpConfiguration.IpAssignment.DHCP) ? true : false;
-            boolean useStatic = (mEthManager.getConfiguration().ipAssignment == IpConfiguration.IpAssignment.STATIC) ? true : false;
-            boolean usePppoe = (mEthManager.getConfiguration().ipAssignment == IpConfiguration.IpAssignment.PPPOE) ? true : false;
-            boolean useUnassigned = (mEthManager.getConfiguration().ipAssignment == IpConfiguration.IpAssignment.UNASSIGNED) ? true : false;
-            if (useDhcp) {
-                ipMode = "DHCP";
-            } else if (useStatic) {
-                ipMode = "STATIC";
-            } else if (usePppoe) {
-                ipMode = "PPPOE";
-            } else if (useUnassigned) {
-                ipMode = "UNASSIGNED";
+            int sdk = Build.VERSION.SDK_INT;
+            if (sdk >= 24) {
+                android.net.EthernetManager mEthManager = (android.net.EthernetManager) context.getSystemService("ethernet");
+                boolean useDhcp = (mEthManager.getConfiguration().ipAssignment == IpConfiguration.IpAssignment.DHCP) ? true : false;
+                boolean useStatic = (mEthManager.getConfiguration().ipAssignment == IpConfiguration.IpAssignment.STATIC) ? true : false;
+                boolean usePppoe = (mEthManager.getConfiguration().ipAssignment == IpConfiguration.IpAssignment.PPPOE) ? true : false;
+                boolean useUnassigned = (mEthManager.getConfiguration().ipAssignment == IpConfiguration.IpAssignment.UNASSIGNED) ? true : false;
+                if (useDhcp) {
+                    ipMode = "DHCP";
+                } else if (useStatic) {
+                    ipMode = "STATIC";
+                } else if (usePppoe) {
+                    ipMode = "PPPOE";
+                } else if (useUnassigned) {
+                    ipMode = "UNASSIGNED";
+                } else {
+                    ipMode = "NONE";
+                }
             } else {
-                ipMode = "NONE";
+                android.net.ethernet.EthernetManager ethernetManager = EthernetManager.getInstance();
+                boolean isDhcp = ethernetManager.isDhcp();
+                ipMode=isDhcp ? "DHCP" : "STATIC";
             }
             return ipMode;
-        } else {
-            android.net.ethernet.EthernetManager ethernetManager = EthernetManager.getInstance();
-            boolean isDhcp = ethernetManager.isDhcp();
-            return isDhcp ? "DHCP" : "STATIC";
+        }catch (Throwable throwable){
+            Log.e(TAG, "getIpMode: ", throwable);
+            return "NONE";
         }
     }
 
