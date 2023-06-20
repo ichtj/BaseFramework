@@ -4,13 +4,19 @@ import android.app.ActivityManager;
 import android.content.Context;
 import android.os.Build;
 import android.os.Environment;
+import android.os.Process;
 import android.os.StatFs;
 import android.util.Log;
 
 import com.chtj.base_framework.entity.Space;
 import com.chtj.base_framework.entity.RomSpace;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.text.DecimalFormat;
 
 /**
  * 存储，空间相关工具类
@@ -133,5 +139,51 @@ public class FStorageTools {
             Log.e(TAG,"errMeg:"+e.getMessage());
             return new Space(0, 0, 0);
         }
+    }
+
+    /**
+     * 获取cpu占用率
+     */
+    public static double getCpuUsage() {
+        try {
+            long[] cpuTime = getCpuTime();
+            long idleTime = cpuTime[3];
+            long totalTime = getTotalCpuTime(cpuTime);
+            // Calculate CPU usage percentage
+            double cpuUsagePercentage= calculateCpuUsage(idleTime, totalTime);
+            BigDecimal bigDecimal = new BigDecimal(cpuUsagePercentage);
+            BigDecimal roundedValue = bigDecimal.setScale(2, BigDecimal.ROUND_HALF_UP);
+            return roundedValue.doubleValue();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return 0;
+    }
+    private static long[] getCpuTime() throws IOException {
+        BufferedReader reader = new BufferedReader(new FileReader("/proc/stat"));
+        String line = reader.readLine();
+        reader.close();
+        String[] fields = line.split("\\s+");
+        long[] cpuTime = new long[fields.length - 1];
+        for (int i = 1; i < fields.length; i++) {
+            cpuTime[i - 1] = Long.parseLong(fields[i]);
+        }
+        return cpuTime;
+    }
+
+    private static long getTotalCpuTime(long[] cpuTime) {
+        long total = 0;
+        for (long time : cpuTime) {
+            total += time;
+        }
+        return total;
+    }
+    private static double calculateCpuUsage(long idleTime, long totalTime) {
+        long elapsedCpuTime = Process.getElapsedCpuTime() * 1000; // Convert to nanoseconds
+
+        // Calculate CPU usage percentage
+        double cpuUsagePercentage = ((totalTime - idleTime) / (double) elapsedCpuTime) * 100;
+
+        return cpuUsagePercentage;
     }
 }
