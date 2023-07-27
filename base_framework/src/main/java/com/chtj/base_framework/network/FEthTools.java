@@ -40,7 +40,6 @@ public class FEthTools {
                 ethernetManager.setEnabled(true);
             }
         }catch (Throwable throwable){
-            Log.e(TAG, "closeEth: ", throwable);
         }
     }
 
@@ -58,7 +57,6 @@ public class FEthTools {
                 ethernetManager.setEnabled(false);
             }
         }catch (Throwable throwable){
-            Log.e(TAG, "closeEth: ", throwable);
         }
     }
 
@@ -94,7 +92,6 @@ public class FEthTools {
             }
             return ipMode;
         }catch (Throwable throwable){
-            Log.e(TAG, "getIpMode: ", throwable);
             return "NONE";
         }
     }
@@ -177,8 +174,6 @@ public class FEthTools {
             IpConfiguration mIpConfiguration = new IpConfiguration(IpConfiguration.IpAssignment.STATIC, IpConfiguration.ProxySettings.NONE, mStaticIpConfiguration, null);
             mEthManager.setConfiguration(mIpConfiguration);
         } catch (Exception e) {
-            e.printStackTrace();
-            Log.e(TAG, "errMeg:" + e.getMessage());
             return CommonValue.ETH_SECURITY_ERR;
         }
         return CommonValue.EXEU_COMPLETE;
@@ -198,7 +193,6 @@ public class FEthTools {
          */
         Pattern pattern = Pattern.compile("(^((\\d|[01]?\\d\\d|2[0-4]\\d|25[0-5])\\.){3}(\\d|[01]?\\d\\d|2[0-4]\\d|25[0-5])$)|^(\\d|[1-2]\\d|3[0-2])$");
         if (pattern.matcher(maskStr).matches() == false) {
-            Log.e(TAG, "subMask is error");
             return 0;
         }
 
@@ -237,8 +231,6 @@ public class FEthTools {
                 ethernetManager.setConfiguration(new IpConfiguration(IpConfiguration.IpAssignment.DHCP, IpConfiguration.ProxySettings.NONE, null, null));
                 return CommonValue.EXEU_COMPLETE;
             } catch (SecurityException e) {
-                e.printStackTrace();
-                Log.e(TAG, "errMeg:" + e.getMessage());
                 return CommonValue.ETH_SECURITY_ERR;
             }
         } else {
@@ -251,8 +243,6 @@ public class FEthTools {
                 try {
                     hwaddr = loadFileAsString("/sys/class/net/eth0/address").toUpperCase().substring(0, 17);
                 } catch (Exception e) {
-                    e.printStackTrace();
-                    Log.e(TAG, "errMeg:" + e.getMessage());
                 }
                 mDevInfo.setHwaddr(hwaddr);
                 mDevInfo.setConnectMode(EthernetDevInfo.ETHERNET_CONN_MODE_DHCP);
@@ -260,8 +250,6 @@ public class FEthTools {
                 ethernetManager.setEnabled(true);
                 return CommonValue.EXEU_COMPLETE;
             } catch (SecurityException e) {
-                e.printStackTrace();
-                Log.e(TAG, "errMeg:" + e.getMessage());
                 return CommonValue.ETH_SECURITY_ERR;
             }
         }
@@ -279,8 +267,6 @@ public class FEthTools {
             try {
                 hwaddr = loadFileAsString("/sys/class/net/eth0/address").toUpperCase().substring(0, 17);
             } catch (Exception e) {
-                e.printStackTrace();
-                Log.e(TAG, "errMeg:" + e.getMessage());
             }
             mDevInfo.setHwaddr(hwaddr);
             mDevInfo.setIpAddress(ipConfigInfo.getIp());
@@ -293,8 +279,6 @@ public class FEthTools {
             ethernetManager.setEnabled(true);
             return CommonValue.EXEU_COMPLETE;
         } catch (SecurityException e) {
-            e.printStackTrace();
-            Log.e(TAG, "errMeg:" + e.getMessage());
             return CommonValue.ETH_SECURITY_ERR;
         }
     }

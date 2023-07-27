@@ -64,7 +64,6 @@ public class FLteTools {
             }
             dbmAsu = signalDbm + " dBm " + signalAsu + " asu";
         } catch (Exception e) {
-            e.printStackTrace();
             dbmAsu = 0 + " dBm " + 0 + " asu";
         }
         return dbmAsu;

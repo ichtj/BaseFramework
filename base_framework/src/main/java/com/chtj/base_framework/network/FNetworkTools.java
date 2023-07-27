@@ -40,7 +40,6 @@ public class FNetworkTools {
         if (commandResult.result == 0 && commandResult.successMsg != null) {
             if (commandResult.successMsg.length() > 0) {
                 String[] result = commandResult.successMsg.replace("]: [", ":").replace("][", "];[").split(";");
-                Log.d(TAG, "getDns:>=" + result);
                 return result;
             } else {
                 return null;
@@ -84,7 +83,6 @@ public class FNetworkTools {
      * @return 系统总计消耗的流量
      */
     public static long getEthTotalUsage(long startTime, final long endTime) {
-        Log.d(TAG, "geEthSysTotalUsageData: start =" + startTime + ",endtime=" + endTime);
         long value = 0;
         try {
             // wait a few seconds before kicking off
@@ -97,63 +95,21 @@ public class FNetworkTools {
             ///*FIELD_RX_BYTES | FIELD_TX_BYTES*/
             NetworkStatsHistory networkStatsHistory = mStatsSession.getHistoryForNetwork(mTemplate, NetworkStatsHistory.FIELD_ALL);
             NetworkStatsHistory.Entry entry = null;
-            long bucketDuration = networkStatsHistory.getBucketDuration();
+            //long bucketDuration = networkStatsHistory.getBucketDuration();
             entry = networkStatsHistory.getValues(startTime, endTime, System.currentTimeMillis(), entry);
             value = entry != null ? entry.rxBytes + entry.txBytes : 0;
-            Log.d(TAG, "geEthSysTotalUsageData: " + entry.rxBytes + "," + entry.txBytes);
+            //Log.d(TAG, "geEthSysTotalUsageData: " + entry.rxBytes + "," + entry.txBytes);
             final String totalPhrase = Formatter.formatFileSize(FBaseTools.getContext(), value);
             long totalBytes = networkStatsHistory.getTotalBytes();
             int afterBucketCount2 = networkStatsHistory.getIndexAfter(startTime);
             int beforeBucketCount2 = networkStatsHistory.getIndexBefore(startTime);
-            Log.i(TAG, "geEthSysTotalUsageData afterBucketCount2:" + afterBucketCount2 + ",beforeBucketCount2:" + beforeBucketCount2);
-            Log.d(TAG, "geEthSysTotalUsageData bucketDuration =" + bucketDuration + "totalPhrase:" + totalPhrase + ",totalBytes:" + totalBytes);
+            //Log.i(TAG, "geEthSysTotalUsageData afterBucketCount2:" + afterBucketCount2 + ",beforeBucketCount2:" + beforeBucketCount2);
+            //Log.d(TAG, "geEthSysTotalUsageData bucketDuration =" + bucketDuration + "totalPhrase:" + totalPhrase + ",totalBytes:" + totalBytes);
             mStatsSession.close();
         } catch (RemoteException e) {
-            e.printStackTrace();
-            Log.d(TAG, "geEthSysTotalUsageData:>e1=" + e.getMessage());
-        } finally {
-            Log.d(TAG, "geEthSysTotalUsageData:finally");
         }
-        Log.d(TAG, "geEthSysTotalUsageData total_value1:" + value);
         return value;
     }
-
-    /**
-     * 获取4G信号
-     * 这里说的大于>-90 是指越接近正数信号越好
-     */
-    public static void lteListener(Context context, NetDbmListener netDbmListener) {
-        TelephonyManager tm = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
-        PhoneStateListener phoneStateListener = new PhoneStateListener() {
-            @Override
-            public void onSignalStrengthsChanged(SignalStrength signalStrength) {
-                super.onSignalStrengthsChanged(signalStrength);
-                String dbmAsu = "";
-                try {
-                    Method method1 = signalStrength.getClass().getMethod("getDbm");
-                    int signalDbm = (int) method1.invoke(signalStrength);
-                    method1 = signalStrength.getClass().getMethod("getAsuLevel");
-                    int signalAsu = (int) method1.invoke(signalStrength);
-                    if (-1 == signalDbm) {
-                        signalDbm = 0;
-                    }
-                    if (-1 == signalAsu) {
-                        signalAsu = 0;
-                    }
-                    dbmAsu = signalDbm + " dBm " + signalAsu + " asu";
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    Log.e(TAG, "errMeg:" + e.getMessage());
-                    dbmAsu = 0 + " dBm " + 0 + " asu";
-                }
-                netDbmListener.getDbm(dbmAsu);
-            }
-        };
-        tm.listen(phoneStateListener, PhoneStateListener.LISTEN_DATA_CONNECTION_STATE
-                | PhoneStateListener.LISTEN_SIGNAL_STRENGTHS
-                | PhoneStateListener.LISTEN_SERVICE_STATE);
-    }
-
 
     /**
      * 获取移动数据流量系统总计消耗的流量
@@ -178,24 +134,24 @@ public class FNetworkTools {
             entry = networkStatsHistory.getValues(startTime, endTime, System.currentTimeMillis(), entry);
             value = entry != null ? entry.rxBytes + entry.txBytes : 0;
             //上行流量
-            Log.d(TAG, "geMobileTotalUsageData: tx=" + entry.txBytes);
+            //Log.d(TAG, "geMobileTotalUsageData: tx=" + entry.txBytes);
             //下行流量
-            Log.d(TAG, "geMobileTotalUsageData: rx=" + entry.rxBytes);
+            //Log.d(TAG, "geMobileTotalUsageData: rx=" + entry.rxBytes);
             final String totalPhrase = Formatter.formatFileSize(FBaseTools.getContext(), value);
             //这里是总流量
             long totalBytes = networkStatsHistory.getTotalBytes();
             int afterBucketCount2 = networkStatsHistory.getIndexAfter(startTime);
             int beforeBucketCount2 = networkStatsHistory.getIndexBefore(startTime);
-            Log.i(TAG, "geMobileTotalUsageData afterBucketCount2:" + afterBucketCount2 + ",beforeBucketCount2:" + beforeBucketCount2);
-            Log.d(TAG, "geMobileTotalUsageData bucketDuration =" + bucketDuration + ",totalPhrase:" + totalPhrase + ",totalBytes:" + totalBytes);
+            //Log.i(TAG, "geMobileTotalUsageData afterBucketCount2:" + afterBucketCount2 + ",beforeBucketCount2:" + beforeBucketCount2);
+            //Log.d(TAG, "geMobileTotalUsageData bucketDuration =" + bucketDuration + ",totalPhrase:" + totalPhrase + ",totalBytes:" + totalBytes);
             mStatsSession.close();
         } catch (RemoteException e) {
-            e.printStackTrace();
-            Log.d(TAG, "geMobileTotalUsageData:>e1=" + e.getMessage());
+            //e.printStackTrace();
+            //Log.d(TAG, "geMobileTotalUsageData:>e1=" + e.getMessage());
         } finally {
-            Log.d(TAG, "geMobileTotalUsageData:finally");
+            //Log.d(TAG, "geMobileTotalUsageData:finally");
         }
-        Log.d(TAG, "geMobileTotalUsageData total_value1:" + value);
+        //Log.d(TAG, "geMobileTotalUsageData total_value1:" + value);
         return value;
     }
 
