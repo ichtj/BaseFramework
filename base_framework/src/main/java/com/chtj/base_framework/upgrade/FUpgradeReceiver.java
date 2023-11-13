@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.hardware.usb.UsbManager;
+import android.text.TextUtils;
 import android.util.Log;
 import android.util.SparseArray;
 
@@ -12,8 +13,9 @@ public class FUpgradeReceiver extends BroadcastReceiver {
     private static final String ACTION_USB_STATE = "android.hardware.usb.action.USB_STATE";
     private static final String ACTION_UPDATE_RESULT = "action.firmware.update.result";
     private static FUpgradeInterface fUpgradeInterface;
+
     public static void setfUpgradeInterface(FUpgradeInterface upgradeInterface) {
-        fUpgradeInterface=upgradeInterface;
+        fUpgradeInterface = upgradeInterface;
     }
 
     @Override
@@ -30,19 +32,13 @@ public class FUpgradeReceiver extends BroadcastReceiver {
                 String inOtaPath = intent.getData().toString().replace("file://", "");
                 if (!inOtaPath.contains("storage/emulated")) {//防止系统重启完成之后挂载了sdcard对此服务造成影响
                     Log.d(TAG, "onReceive: action=" + action + ", inOtaPath=" + inOtaPath);
-                    Intent serviceIntent = new Intent(context, FUpgradeService.class);
-                    serviceIntent.putExtra("action", "connect");
-                    serviceIntent.putExtra("otaPath", inOtaPath);
-                    context.startService(serviceIntent);
+                    FUpgradeService.startServiceUgrade(context, "connect", inOtaPath);
                 }
                 break;
             case Intent.ACTION_MEDIA_UNMOUNTED://设备卸载
                 String unOtaPath = intent.getData().toString().replace("file://", "");
                 Log.d(TAG, "onReceive: action=" + action + ", unOtaPath=" + unOtaPath);
-                Intent unMounted = new Intent(context, FUpgradeService.class);
-                unMounted.putExtra("action", "disconnect");
-                unMounted.putExtra("otaPath", unOtaPath);
-                context.startService(unMounted);
+                FUpgradeService.startServiceUgrade(context, "disconnect", unOtaPath);
                 break;
             case ACTION_USB_STATE://usb状态
                 Log.d(TAG, "onReceive: action=" + action);
@@ -62,16 +58,20 @@ public class FUpgradeReceiver extends BroadcastReceiver {
             case ACTION_UPDATE_RESULT:
                 int errorCode = intent.getIntExtra("statusCode", -1);
                 Log.d(TAG, "onReceive: ACTION_RESULT>" + errorCode);
-                if (errorCode == FUpgradeTools.I_CHECK||errorCode==FUpgradeTools.I_COPY||errorCode==FUpgradeTools.I_INSTALLING) {
-                    if(fUpgradeInterface!=null) {
+                if (errorCode == FUpgradeTools.I_CHECK || errorCode == FUpgradeTools.I_COPY || errorCode == FUpgradeTools.I_INSTALLING) {
+                    if (fUpgradeInterface != null) {
                         fUpgradeInterface.installStatus(errorCode);
                     }
-                }else{
-                    if(fUpgradeInterface!=null){
+                } else {
+                    if (fUpgradeInterface != null) {
                         String statusStr = intent.getStringExtra("statusStr");
                         fUpgradeInterface.error(statusStr);
                     }
                 }
+                break;
+            case FUpgradeService.ACTION_UPDATE:
+                String otaPath = intent.getStringExtra("otaPath");
+                FUpgradeService.startServiceUgrade(context, "connect", otaPath);
                 break;
         }
     }

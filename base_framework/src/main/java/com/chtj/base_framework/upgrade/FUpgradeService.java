@@ -1,11 +1,13 @@
 package com.chtj.base_framework.upgrade;
 
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
+import android.text.TextUtils;
 import android.util.Log;
 
 import java.io.File;
@@ -16,8 +18,16 @@ import java.io.File;
 public class FUpgradeService extends Service {
     private static final String TAG = "FUpgradeService";
     public static final String ACTION_UPDATE_RESULT = "android.intent.action.CN_OTA_RESULT";
+    public static final String ACTION_UPDATE = "android.intent.action.CN_OTA_UPDATE";
     public static final int OK_RESULT = 0x1001;//固件升级成功
     public static final int ERR_RESULT = 0x1002;//固件升级失败
+
+    public static void startServiceUgrade(Context context, String action, String otaPath) {
+        Intent serviceIntent = new Intent(context, FUpgradeService.class);
+        serviceIntent.putExtra("action", action);
+        serviceIntent.putExtra("otaPath", otaPath);
+        context.startService(serviceIntent);
+    }
 
     Handler mWorkHandler = new Handler() {
         @Override
@@ -50,12 +60,12 @@ public class FUpgradeService extends Service {
         try {
             new File("/data/update.zip").delete();
         } catch (Exception e) {
-            Log.e(TAG, "errMeg1:" ,e);
+            Log.e(TAG, "errMeg1:", e);
         }
         try {
             new File("/data/misc/.update").delete();
-        }catch (Exception e){
-            Log.e(TAG,"errMeg2:",e);
+        } catch (Exception e) {
+            Log.e(TAG, "errMeg2:", e);
         }
     }
 
@@ -73,32 +83,38 @@ public class FUpgradeService extends Service {
         Log.d(TAG, "onStartCommand: action=" + action);
         switch (action) {
             case "connect":
-                String path = intent.getStringExtra("otaPath");
-                String otaPath = path + "/update.zip";
-                File file = new File(otaPath);
-                boolean isExist = file.exists();
-                Log.d(TAG, "onStartCommand: otaPath=" + otaPath + ",exist=" + isExist);
-                if (isExist) {
-                    FUpgradeDialog.instance().showUpdateDialog(otaPath, FUpgradeService.this);
+                String otaPath = intent.getStringExtra("otaPath");
+                if(!TextUtils.isEmpty(otaPath)){
+                    if (!new File(otaPath).isDirectory()) {
+                        otaPath += File.separator; // 自动添加适当的路径分隔符
+                        otaPath = otaPath + "update.zip";
+                    }
+                    boolean isExist = new File(otaPath).exists();
+                    Log.d(TAG, "onStartCommand: otaPath=" + otaPath + ",exist=" + isExist);
+                    if (isExist) {
+                        FUpgradeDialog.instance().showUpdateDialog(otaPath, FUpgradeService.this);
+                    }
+                }else{
+                    sendErrReceiver("ota_path is null!");
                 }
                 break;
             case "disconnect":
                 FUpgradeDialog.instance().dismissDialog();
                 break;
             case "reboot":
-                if(Build.VERSION.SDK_INT>=30){
-                    String[] upDownVersion=FUpgradeTools.readFileData("/data/misc/.update").split(";");
-                    if(upDownVersion.length>1){
-                        int checkVersion=FUpgradeTools.compareVersion(upDownVersion[0],upDownVersion[1]);
-                        if(checkVersion==1){
+                if (Build.VERSION.SDK_INT >= 30) {
+                    String[] upDownVersion = FUpgradeTools.readFileData("/data/misc/.update").split(";");
+                    if (upDownVersion.length > 1) {
+                        int checkVersion = FUpgradeTools.compareVersion(upDownVersion[0], upDownVersion[1]);
+                        if (checkVersion == 1) {
                             sendCompleteReceiver();
-                        }else if(checkVersion==0){
+                        } else if (checkVersion == 0) {
                             sendErrReceiver("Same firmware version");
-                        }else{
+                        } else {
                             sendErrReceiver("Update.zip Low version");
                         }
                     }
-                }else{
+                } else {
                     //获取cache/recovery/last_install文件
                     String upLastInstall = FRecoverySystemTools.readLastInstallCommand();
                     //获取cache/recovery/last_flag文件

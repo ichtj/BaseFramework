@@ -1,37 +1,37 @@
 package com.chtj.base_framework.entity;
 
 public class Space {
-    private long totalSize;
-    private long useSize;
-    private long availableSize;
+    private String totalSize;
+    private String useSize;
+    private String availableSize;
 
-    public Space(long totalSize, long useSize, long availableSize) {
+    public Space(String totalSize, String useSize, String availableSize) {
         this.totalSize = totalSize;
         this.useSize = useSize;
         this.availableSize = availableSize;
     }
 
-    public long getTotalSize() {
+    public String getTotalSize() {
         return totalSize;
     }
 
-    public void setTotalSize(long totalSize) {
+    public void setTotalSize(String totalSize) {
         this.totalSize = totalSize;
     }
 
-    public long getUseSize() {
+    public String getUseSize() {
         return useSize;
     }
 
-    public void setUseSize(long useSize) {
+    public void setUseSize(String useSize) {
         this.useSize = useSize;
     }
 
-    public long getAvailableSize() {
+    public String getAvailableSize() {
         return availableSize;
     }
 
-    public void setAvailableSize(long availableSize) {
+    public void setAvailableSize(String availableSize) {
         this.availableSize = availableSize;
     }
 

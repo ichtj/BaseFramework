@@ -3,6 +3,7 @@ package com.chtj.base_framework;
 import android.app.ActivityManager;
 import android.content.Context;
 import android.os.Build;
+import android.os.Debug;
 import android.os.Environment;
 import android.os.Process;
 import android.os.StatFs;
@@ -23,18 +24,61 @@ import java.text.DecimalFormat;
  */
 public class FStorageTools {
     private static final String TAG = "FStorageTools";
+    public static final String TYPE_B = "B";
+    public static final String TYPE_KB = "KB";
+    public static final String TYPE_MB = "MB";
+    public static final String TYPE_GB = "GB";
+    public static final String TYPE_TB = "TB";
+
+    public static String formatSize(long size, String unit) {
+        double formattedSize = size;
+        String[] units = {"B", "KB", "MB", "GB", "TB"};
+
+        int index = 0;
+        while (formattedSize >= 1024 && index < units.length - 1) {
+            formattedSize /= 1024;
+            index++;
+        }
+
+        String formattedUnit = units[index];
+
+        if (unit.equals("B")) {
+            formattedSize *= Math.pow(1024, index);
+            formattedUnit = units[0];
+        } else if (unit.equals("KB")) {
+            formattedSize *= Math.pow(1024, index - 1);
+            formattedUnit = units[1];
+        } else if (unit.equals("MB")) {
+            formattedSize *= Math.pow(1024, index - 2);
+            formattedUnit = units[2];
+        } else if (unit.equals("GB")) {
+            formattedSize *= Math.pow(1024, index - 3);
+            formattedUnit = units[3];
+        } else if (unit.equals("TB")) {
+            formattedSize *= Math.pow(1024, index - 4);
+            formattedUnit = units[4];
+        }
+
+        return String.format("%.2f %s", formattedSize, formattedUnit);
+    }
 
     /**
      * 获取ram占用
      *
      * @return
      */
-    public static Space getRamSpace() {
-        //获取运行内存的信息
-        ActivityManager manager = (ActivityManager) FBaseTools.getContext().getSystemService(Context.ACTIVITY_SERVICE);
-        ActivityManager.MemoryInfo info = new ActivityManager.MemoryInfo();
-        manager.getMemoryInfo(info);
-        return new Space(info.totalMem/1024/1024, (info.totalMem - info.availMem)/1024/1024, info.availMem/1024/1024);
+    public static Space getRamSpace(String unit) {
+        try {
+            ActivityManager activityManager = (ActivityManager) FBaseTools.getContext().getSystemService(Context.ACTIVITY_SERVICE);
+            ActivityManager.MemoryInfo memoryInfo = new ActivityManager.MemoryInfo();
+            activityManager.getMemoryInfo(memoryInfo);
+            long totalRam = memoryInfo.totalMem;
+            long availableRam = memoryInfo.availMem;
+            long userRam=totalRam-availableRam;
+            return new Space(formatSize(totalRam, unit), formatSize(userRam, unit), formatSize(availableRam, unit));
+        } catch (Throwable throwable) {
+            return new Space(formatSize(0, unit), formatSize(0, unit), formatSize(0, unit));
+        }
     }
 
     /**
@@ -42,21 +86,22 @@ public class FStorageTools {
      *
      * @return
      */
-    public static RomSpace getRomSpace() {
-        //获取ROM内存信息
-        //调用该类来获取磁盘信息（而getDataDirectory就是内部存储）
-        final StatFs statFs = new StatFs(Environment.getDataDirectory().getPath());
-        /*总共的block数*/
-        long totalCounts = statFs.getBlockCountLong();
-        /*获取可用的block数*/
-        long availableCounts = statFs.getAvailableBlocksLong();
-        /*每格所占的大小，一般是4KB==*/
-        long size = statFs.getBlockSizeLong();
-        /*可用内部存储大小*/
-        long availRomSize = availableCounts * size;
-        /*内部存储总大小*/
-        long totalRomSize = totalCounts * size;
-        return new RomSpace(totalRomSize/1024/1024, (totalRomSize - availRomSize)/1024/1024, availRomSize/1024/1024, availableCounts, totalCounts, size);
+    public static Space getRomSpace(String unit) {
+        try {
+            // 获取 ROM 存储信息
+            StatFs statFs = new StatFs(Environment.getDataDirectory().getAbsolutePath());
+            long blockSize = statFs.getBlockSizeLong();
+            long totalBlocks = statFs.getBlockCountLong();
+            long availableBlocks = statFs.getAvailableBlocksLong();
+
+            // 计算存储空间信息
+            long totalSpace = totalBlocks * blockSize;
+            long availableSpace = availableBlocks * blockSize;
+            long usedSpace = totalSpace - availableSpace;
+            return new Space(formatSize(totalSpace, unit), formatSize(usedSpace, unit), formatSize(availableSpace, unit));
+        } catch (Throwable throwable) {
+            return new Space(formatSize(0, unit), formatSize(0, unit), formatSize(0, unit));
+        }
     }
 
 
@@ -65,11 +110,21 @@ public class FStorageTools {
      *
      * @return
      */
-    public static Space getSdcardSpace() {
-        long total = getTotalInternalMemorySize();
-        long available = getAvailableInternalMemorySize();
-        long use = total - available;
-        return new Space(total/1024/1024, use/1024/1024, available/1024/1024);
+    public static Space getSdcardSpace(String unit) {
+        try {
+            // 获取 SD 卡存储信息
+            StatFs statFs = new StatFs(Environment.getExternalStorageDirectory().getAbsolutePath());
+            long blockSize = statFs.getBlockSizeLong();
+            long totalBlocks = statFs.getBlockCountLong();
+            long availableBlocks = statFs.getAvailableBlocksLong();
+            // 计算存储空间信息
+            long totalSpace = totalBlocks * blockSize;
+            long availableSpace = availableBlocks * blockSize;
+            long usedSpace = totalSpace - availableSpace;
+            return new Space(formatSize(totalSpace, unit), formatSize(usedSpace, unit), formatSize(availableSpace, unit));
+        } catch (Throwable throwable) {
+            return new Space(formatSize(0, unit), formatSize(0, unit), formatSize(0, unit));
+        }
     }
 
     /**
@@ -109,35 +164,35 @@ public class FStorageTools {
      *
      * @return
      */
-    public static Space getTfSpace() {
+    public static Space getTfSpace(String unit) {
         try {
             FCmdTools.CommandResult commandResult = null;
             int sdk = Build.VERSION.SDK_INT;
             if (sdk >= 24) {
-                String appStr="-rn";
-                if(sdk>=30){
-                    appStr="";
+                String appStr = "-rn";
+                if (sdk >= 30) {
+                    appStr = "";
                 }
-                commandResult = FCmdTools.execCommand("df | grep "+appStr+" /mnt/media_rw", true);
+                commandResult = FCmdTools.execCommand("df | grep " + appStr + " /mnt/media_rw", true);
                 if (commandResult.successMsg != null && commandResult.successMsg.length() > 0) {
                     String[] result = commandResult.successMsg.substring(4).trim().replaceAll("\\s+", " ").split(" ");
-                    return new Space(Integer.valueOf(result[2])/1024, Integer.valueOf(result[3])/1024, Integer.valueOf(result[4])/1024);
+                    return new Space((Integer.valueOf(result[2]) / 1024) + "", (Integer.valueOf(result[3]) / 1024) + "", (Integer.valueOf(result[4]) / 1024) + "");
                 } else {
-                    return new Space(0, 0, 0);
+                    return new Space(formatSize(0, unit), formatSize(0, unit), formatSize(0, unit));
                 }
             } else {
                 commandResult = FCmdTools.execCommand("busybox df -m | grep /mnt/media_rw/extsd", true);
                 Log.d(TAG, "getTfSpace: successMeg=" + commandResult.successMsg);
                 if (commandResult.successMsg != null && commandResult.successMsg.length() > 0) {
                     String[] resultCall = commandResult.successMsg.substring(4).trim().replaceAll("\\s+", " ").split(" ");
-                    return new Space(Long.parseLong(resultCall[0]), Long.parseLong(resultCall[1]), Long.parseLong(resultCall[2]));
+                    return new Space(Long.parseLong(resultCall[0]) + "", Long.parseLong(resultCall[1]) + "", Long.parseLong(resultCall[2]) + "");
                 } else {
-                    return new Space(0, 0, 0);
+                    return new Space(formatSize(0, unit), formatSize(0, unit), formatSize(0, unit));
                 }
             }
-        }catch (Exception e){
-            Log.e(TAG,"errMeg:"+e.getMessage());
-            return new Space(0, 0, 0);
+        } catch (Exception e) {
+            Log.e(TAG, "errMeg:" + e.getMessage());
+            return new Space(formatSize(0, unit), formatSize(0, unit), formatSize(0, unit));
         }
     }
 
@@ -150,7 +205,7 @@ public class FStorageTools {
             long idleTime = cpuTime[3];
             long totalTime = getTotalCpuTime(cpuTime);
             // Calculate CPU usage percentage
-            double cpuUsagePercentage= calculateCpuUsage(idleTime, totalTime);
+            double cpuUsagePercentage = calculateCpuUsage(idleTime, totalTime);
             BigDecimal bigDecimal = new BigDecimal(cpuUsagePercentage);
             BigDecimal roundedValue = bigDecimal.setScale(2, BigDecimal.ROUND_HALF_UP);
             return roundedValue.doubleValue();
@@ -159,6 +214,7 @@ public class FStorageTools {
         }
         return 0;
     }
+
     private static long[] getCpuTime() throws IOException {
         BufferedReader reader = new BufferedReader(new FileReader("/proc/stat"));
         String line = reader.readLine();
@@ -178,6 +234,7 @@ public class FStorageTools {
         }
         return total;
     }
+
     private static double calculateCpuUsage(long idleTime, long totalTime) {
         long elapsedCpuTime = Process.getElapsedCpuTime() * 1000; // Convert to nanoseconds
 

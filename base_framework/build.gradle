@@ -33,6 +33,7 @@ dependencies {
     testImplementation 'junit:junit:4.+'
     //network
     //rxjava
+    api rootProject.ext.support["core"]
     api rootProject.ext.dependencies.rxjava
     api rootProject.ext.dependencies.okhttp
     api rootProject.ext.dependencies.retrofit

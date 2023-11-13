@@ -8,9 +8,11 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.Display;
 import android.view.View;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.chtj.base_framework.FBaseTools;
+import com.chtj.base_framework.FStorageTools;
 import com.chtj.base_framework.entity.UpgradeBean;
 import com.chtj.base_framework.network.FLteTools;
 import com.chtj.base_framework.upgrade.FUpgradeInterface;
@@ -20,11 +22,16 @@ import com.zgkx.change.test.ShellUtils;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivityInfo";
+    TextView tvResult;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        FBaseTools.instance().create(this.getApplication());
+        tvResult=findViewById(R.id.tvResult);
+        tvResult.append("\n\rrom>>"+FStorageTools.getRomSpace(FStorageTools.TYPE_MB).toString());
+        tvResult.append("\n\rram>>"+FStorageTools.getRamSpace(FStorageTools.TYPE_MB).toString());
+        tvResult.append("\n\rtf>>"+FStorageTools.getTfSpace(FStorageTools.TYPE_MB).toString());
+        tvResult.append("\n\rsdcard>>"+FStorageTools.getSdcardSpace(FStorageTools.TYPE_MB).toString());
         PermissionsUtils.with(this)
                 .addPermission(Manifest.permission.READ_EXTERNAL_STORAGE)
                 .addPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)
