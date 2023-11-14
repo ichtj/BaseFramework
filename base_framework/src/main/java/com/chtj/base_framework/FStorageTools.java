@@ -10,7 +10,6 @@ import android.os.StatFs;
 import android.util.Log;
 
 import com.chtj.base_framework.entity.Space;
-import com.chtj.base_framework.entity.RomSpace;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -30,7 +29,7 @@ public class FStorageTools {
     public static final String TYPE_GB = "GB";
     public static final String TYPE_TB = "TB";
 
-    public static String formatSize(long size, String unit) {
+    public static double formatSize(long size, String unit) {
         double formattedSize = size;
         String[] units = {"B", "KB", "MB", "GB", "TB"};
 
@@ -39,27 +38,29 @@ public class FStorageTools {
             formattedSize /= 1024;
             index++;
         }
-
-        String formattedUnit = units[index];
-
         if (unit.equals("B")) {
             formattedSize *= Math.pow(1024, index);
-            formattedUnit = units[0];
+            //formattedUnit = units[0];
         } else if (unit.equals("KB")) {
             formattedSize *= Math.pow(1024, index - 1);
-            formattedUnit = units[1];
+            //formattedUnit = units[1];
         } else if (unit.equals("MB")) {
             formattedSize *= Math.pow(1024, index - 2);
-            formattedUnit = units[2];
+            //formattedUnit = units[2];
         } else if (unit.equals("GB")) {
             formattedSize *= Math.pow(1024, index - 3);
-            formattedUnit = units[3];
+            //formattedUnit = units[3];
         } else if (unit.equals("TB")) {
             formattedSize *= Math.pow(1024, index - 4);
-            formattedUnit = units[4];
+            //formattedUnit = units[4];
         }
-
-        return String.format("%.2f %s", formattedSize, formattedUnit);
+        // 要保留小数点后两位，使用模式"0.00"
+        String pattern = "0.00";
+        DecimalFormat decimalFormat = new DecimalFormat(pattern);
+        // 格式化原始值
+        String formattedValue = decimalFormat.format(formattedSize);
+        // 将格式化后的字符串转换回double
+        return Double.parseDouble(formattedValue);
     }
 
     /**
@@ -176,7 +177,7 @@ public class FStorageTools {
                 commandResult = FCmdTools.execCommand("df | grep " + appStr + " /mnt/media_rw", true);
                 if (commandResult.successMsg != null && commandResult.successMsg.length() > 0) {
                     String[] result = commandResult.successMsg.substring(4).trim().replaceAll("\\s+", " ").split(" ");
-                    return new Space((Integer.valueOf(result[2]) / 1024) + "", (Integer.valueOf(result[3]) / 1024) + "", (Integer.valueOf(result[4]) / 1024) + "");
+                    return new Space((Integer.valueOf(result[2]) / 1024), (Integer.valueOf(result[3]) / 1024), (Integer.valueOf(result[4]) / 1024));
                 } else {
                     return new Space(formatSize(0, unit), formatSize(0, unit), formatSize(0, unit));
                 }
@@ -185,7 +186,7 @@ public class FStorageTools {
                 Log.d(TAG, "getTfSpace: successMeg=" + commandResult.successMsg);
                 if (commandResult.successMsg != null && commandResult.successMsg.length() > 0) {
                     String[] resultCall = commandResult.successMsg.substring(4).trim().replaceAll("\\s+", " ").split(" ");
-                    return new Space(Long.parseLong(resultCall[0]) + "", Long.parseLong(resultCall[1]) + "", Long.parseLong(resultCall[2]) + "");
+                    return new Space(Long.parseLong(resultCall[0]), Long.parseLong(resultCall[1]), Long.parseLong(resultCall[2]));
                 } else {
                     return new Space(formatSize(0, unit), formatSize(0, unit), formatSize(0, unit));
                 }
