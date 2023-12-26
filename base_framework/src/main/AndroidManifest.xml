@@ -47,7 +47,8 @@
         android:name="android.permission.ACCESS_MTP"
         tools:ignore="ProtectedPermissions" />
 
-    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS"
+    <uses-permission
+        android:name="android.permission.WRITE_SECURE_SETTINGS"
         tools:ignore="ProtectedPermissions" />
     <!--唤醒锁-->
     <uses-permission android:name="android.permission.WAKE_LOCK"></uses-permission>
@@ -64,9 +65,13 @@
         android:allowBackup="true"
         android:persistent="true">
         <!--固件升级服务-->
-        <service android:name=".upgrade.FUpgradeService" />
+        <service
+            android:name=".upgrade.FUpgradeService"
+            android:enabled="true"
+            android:exported="true" />
         <!--ota升级广播 用于usb设备接入检测 升级结果回调-->
-        <receiver android:name=".upgrade.FUpgradeReceiver"
+        <receiver
+            android:name=".upgrade.FUpgradeReceiver"
             android:enabled="true"
             android:exported="true">
             <intent-filter>
@@ -78,6 +83,10 @@
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.MEDIA_UNMOUNTED" />
+                <data android:scheme="file" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.MEDIA_EJECT" />
                 <data android:scheme="file" />
             </intent-filter>
             <intent-filter android:priority="1000">

@@ -43,7 +43,7 @@ public class MainActivity extends AppCompatActivity {
 
 
     public void updateClick(View view) {
-        FUpgradeTools.firmwareUpgrade(new UpgradeBean("/sdcard/CloudCache/update.zip", new FUpgradeInterface() {
+        FUpgradeTools.firmwareUpgrade(new UpgradeBean("/sdcard/update.zip", new FUpgradeInterface() {
             @Override
             public void installStatus(int installStatus) {
                 Log.d(TAG, "installStatus: "+installStatus);

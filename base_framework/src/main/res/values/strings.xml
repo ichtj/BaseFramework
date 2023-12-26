@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="upgrade_task_repeat">The ota upgrade task has been run, please do not repeat it!</string>
+    <string name="firmware_donot_exist">Firmware does not exist</string>
+    <string name="otapath_is_null">otaPath is null!</string>
+    <string name="dialog_title">U盘升级</string>
+    <string name="dialog_chek_otapath">检测到固件包,路径为：%s</string>
+    <string name="dialog_cancel">取消</string>
+    <string name="dialog_confirm">确定</string>
+    <string name="same_firmware_version">Same firmware version</string>
+    <string name="update_zip_low_version">Update.zip Low version</string>
+    <string name="version_not_equal">last_install !=1 or currentFwVersion!=upFwVersion</string>
+    <string name="read_last_install_update_fail">last_install file and last_update file err 0</string>
+    <string name="status_check_firmware">当前状态：开始检查固件</string>
+    <string name="status_start_copefw">当前状态：开始拷贝固件</string>
+    <string name="status_start_writefw">当前状态：即将进入刷机模式</string>
+    <string name="status_update_fail">升级异常：%s</string>
+</resources>

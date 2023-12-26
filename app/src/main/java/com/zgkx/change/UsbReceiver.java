@@ -8,12 +8,10 @@ import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbManager;
 import android.util.Log;
 
-import com.zgkx.change.test.MainActivity2;
+import com.chtj.base_framework.upgrade.FExtraTools;
 
 public class UsbReceiver extends BroadcastReceiver {
     private static final String TAG = UsbReceiver.class.getSimpleName();//固件升级重启后的结果回复
-    public static final String ACTION_FW_UPDATE_RESULT = "android.intent.action.CN_OTA_RESULT";
-
     @Override
     public void onReceive(Context context, Intent intent) {
         String action = intent.getAction();
@@ -23,10 +21,10 @@ public class UsbReceiver extends BroadcastReceiver {
             intent1.putExtra(UsbManager.EXTRA_DEVICE, device);
             Log.d(TAG, "Broadcasting USB_CONNECTED device=" + device.toString());
             context.sendBroadcast(intent1);
-        } else if (action.equals(ACTION_FW_UPDATE_RESULT)) {//固件升级成功
+        } else if (action.equals(FExtraTools.ACTION_UPDATE_RESULT)) {//固件升级成功
             Log.d(TAG,"onReceive:>=ACTION_UPDATE_RESULT");
-            boolean isComplete = intent.getBooleanExtra("isComplete", false);
-            String errMeg = intent.getStringExtra("errMeg");
+            boolean isComplete = intent.getBooleanExtra(FExtraTools.EXTRA_ISCOMPLETE, false);
+            String errMeg = intent.getStringExtra(FExtraTools.EXTRA_ERRMEG);
             Log.d(TAG, "onReceive: isComplete="+isComplete+",errMeg="+errMeg);
         }else if(action.equals(Intent.ACTION_BOOT_COMPLETED)){
             Log.d(TAG, "onReceive: ACTION_BOOT_COMPLETED");

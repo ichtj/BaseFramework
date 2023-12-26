@@ -10,22 +10,21 @@ import android.os.Message;
 import android.text.TextUtils;
 import android.util.Log;
 
+import com.chtj.base_framework.FSettingsTools;
+import com.chtj.base_framework.R;
+
 import java.io.File;
 
 /**
  * 固件升级服务管理
  */
 public class FUpgradeService extends Service {
-    private static final String TAG = "FUpgradeService";
-    public static final String ACTION_UPDATE_RESULT = "android.intent.action.CN_OTA_RESULT";
-    public static final String ACTION_UPDATE = "android.intent.action.CN_OTA_UPDATE";
-    public static final int OK_RESULT = 0x1001;//固件升级成功
-    public static final int ERR_RESULT = 0x1002;//固件升级失败
+    private static final String TAG=FUpgradeService.class.getSimpleName();
 
     public static void startServiceUgrade(Context context, String action, String otaPath) {
         Intent serviceIntent = new Intent(context, FUpgradeService.class);
-        serviceIntent.putExtra("action", action);
-        serviceIntent.putExtra("otaPath", otaPath);
+        serviceIntent.putExtra(FExtraTools.ACTION, action);
+        serviceIntent.putExtra(FExtraTools.EXTRA_OTAPATH, otaPath);
         context.startService(serviceIntent);
     }
 
@@ -33,16 +32,16 @@ public class FUpgradeService extends Service {
         @Override
         public void handleMessage(Message msg) {
             super.handleMessage(msg);
-            Intent updateIntent = new Intent(ACTION_UPDATE_RESULT);
+            Intent updateIntent = new Intent(FExtraTools.ACTION_UPDATE_RESULT);
             switch (msg.what) {
-                case OK_RESULT://发送升级成功的广播
-                    updateIntent.putExtra("isComplete", true);
-                    updateIntent.putExtra("errMeg", "");
+                case FExtraTools.OK_RESULT://发送升级成功的广播
+                    updateIntent.putExtra(FExtraTools.EXTRA_ISCOMPLETE, true);
+                    updateIntent.putExtra(FExtraTools.EXTRA_ERRMEG, "");
                     Log.d(TAG, "onCreate: ota update successful!");
                     break;
-                case ERR_RESULT://发送升级失败的广播
-                    updateIntent.putExtra("isComplete", false);
-                    updateIntent.putExtra("errMeg", msg.obj.toString());
+                case FExtraTools.ERR_RESULT://发送升级失败的广播
+                    updateIntent.putExtra(FExtraTools.EXTRA_ISCOMPLETE, false);
+                    updateIntent.putExtra(FExtraTools.EXTRA_ERRMEG, msg.obj.toString());
                     Log.d(TAG, "onCreate: ota update failed! errMeg=" + msg.obj.toString());
                     break;
             }
@@ -58,7 +57,7 @@ public class FUpgradeService extends Service {
      */
     public void deleteUpdateReocrd() {
         try {
-            new File("/data/update.zip").delete();
+            new File(FExtraTools.SAVA_FW_COPY_PATH).delete();
         } catch (Exception e) {
             Log.e(TAG, "errMeg1:", e);
         }
@@ -79,29 +78,28 @@ public class FUpgradeService extends Service {
         if (intent == null) {
             return Service.START_NOT_STICKY;
         }
-        String action = intent.getStringExtra("action");
+        String action = intent.getStringExtra(FExtraTools.ACTION);
         Log.d(TAG, "onStartCommand: action=" + action);
         switch (action) {
-            case "connect":
-                String otaPath = intent.getStringExtra("otaPath");
+            case FExtraTools.ACTION_USB_CONNECT:
+                String otaPath = intent.getStringExtra(FExtraTools.EXTRA_OTAPATH);
                 if(!TextUtils.isEmpty(otaPath)){
-                    if (!new File(otaPath).isDirectory()) {
-                        otaPath += File.separator; // 自动添加适当的路径分隔符
-                        otaPath = otaPath + "update.zip";
+                    if (new File(otaPath).isDirectory()) {
+                        otaPath = otaPath+File.separator + FExtraTools.OTA_NAME;
                     }
                     boolean isExist = new File(otaPath).exists();
                     Log.d(TAG, "onStartCommand: otaPath=" + otaPath + ",exist=" + isExist);
                     if (isExist) {
-                        FUpgradeDialog.instance().showUpdateDialog(otaPath, FUpgradeService.this);
+                        FUpgradeDialog.showUpdateDialog(otaPath, FUpgradeService.this);
                     }
                 }else{
-                    sendErrReceiver("ota_path is null!");
+                    sendErrReceiver(getString(R.string.otapath_is_null));
                 }
                 break;
-            case "disconnect":
-                FUpgradeDialog.instance().dismissDialog();
+            case FExtraTools.ACTION_USB_DISCONNECT:
+                FUpgradeDialog.dismissDialog(intent.getStringExtra(FExtraTools.EXTRA_OTAPATH));
                 break;
-            case "reboot":
+            case FExtraTools.ACTION_BOOT_COMPLETE:
                 if (Build.VERSION.SDK_INT >= 30) {
                     String[] upDownVersion = FUpgradeTools.readFileData("/data/misc/.update").split(";");
                     if (upDownVersion.length > 1) {
@@ -109,9 +107,9 @@ public class FUpgradeService extends Service {
                         if (checkVersion == 1) {
                             sendCompleteReceiver();
                         } else if (checkVersion == 0) {
-                            sendErrReceiver("Same firmware version");
+                            sendErrReceiver(getString(R.string.same_firmware_version));
                         } else {
-                            sendErrReceiver("Update.zip Low version");
+                            sendErrReceiver(getString(R.string.update_zip_low_version));
                         }
                     }
                 } else {
@@ -128,10 +126,10 @@ public class FUpgradeService extends Service {
                             if (lastInstallResult[1].equals("1") && lastFlagResult[3].equals(currentVersion)) {
                                 sendCompleteReceiver();
                             } else {
-                                sendErrReceiver("last_install !=1 or currentFwVersion!=upFwVersion");
+                                sendErrReceiver(getString(R.string.version_not_equal));
                             }
                         } else {
-                            sendErrReceiver("last_install file and last_update file err 0");
+                            sendErrReceiver(getString(R.string.read_last_install_update_fail));
                         }
                     }
                 }
@@ -147,7 +145,7 @@ public class FUpgradeService extends Service {
      */
     private void sendErrReceiver(String errStr) {
         Message msg = new Message();
-        msg.what = ERR_RESULT;
+        msg.what = FExtraTools.ERR_RESULT;
         msg.obj = errStr;
         mWorkHandler.sendMessageDelayed(msg, 3500);
     }
@@ -157,7 +155,7 @@ public class FUpgradeService extends Service {
      */
     private void sendCompleteReceiver() {
         Message msg = new Message();
-        msg.what = OK_RESULT;
+        msg.what = FExtraTools.OK_RESULT;
         mWorkHandler.sendMessageDelayed(msg, 3500);
     }
 
@@ -171,6 +169,6 @@ public class FUpgradeService extends Service {
     public void onDestroy() {
         super.onDestroy();
         Log.d(TAG, "onDestroy: ");
-        FUpgradeDialog.instance().dismissDialog();
+        FUpgradeDialog.dismissDialog();
     }
 }

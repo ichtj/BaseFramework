@@ -1,6 +1,7 @@
 package com.chtj.base_framework.upgrade;
 
 import android.annotation.SuppressLint;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 import android.os.RecoverySystem;
@@ -9,6 +10,7 @@ import android.util.Log;
 import com.chtj.base_framework.FBaseTools;
 import com.chtj.base_framework.FCmdTools;
 import com.chtj.base_framework.FCommonTools;
+import com.chtj.base_framework.R;
 import com.chtj.base_framework.entity.CommonValue;
 import com.chtj.base_framework.entity.UpgradeBean;
 
@@ -28,17 +30,10 @@ import java.util.List;
 public class FUpgradeTools {
     private static final String TAG = "FUpgradeTools";
 
-    /**
-     * 固件最终存放的地址
-     */
-    public static final String SAVA_FW_COPY_PATH = "/data/update.zip";
-
-    /*校验中*/
-    public static final int I_CHECK = 0x101;
-    /*复制到system/data下*/
-    public static final int I_COPY = 0x102;
-    /*安装中*/
-    public static final int I_INSTALLING = 0x103;
+    public static String getPlatform() {
+        FCmdTools.CommandResult commandResult = FCmdTools.execCommand("getprop ro.board.platform", true);
+        return commandResult.successMsg;
+    }
 
     /**
      * 固件系统升级
@@ -46,50 +41,53 @@ public class FUpgradeTools {
      * @param upBean
      */
     public static void firmwareUpgrade(UpgradeBean upBean) {
-        if (Build.VERSION.SDK_INT >= 30) {
+        String platform=getPlatform();
+        Context context=FBaseTools.getContext();
+        Log.d(TAG, "firmwareUpgrade: platform>>"+platform);
+        if (Build.VERSION.SDK_INT >= 30&&!platform.startsWith("rk356")) {
             FUpgradeReceiver.setfUpgradeInterface(upBean.getUpInterface());
-            upBean.getUpInterface().installStatus(FUpgradeTools.I_CHECK);
-            Intent intent=new Intent("action.firmware.update.bypath");
+            upBean.getUpInterface().installStatus(FExtraTools.I_CHECK);
+            Intent intent = new Intent(FExtraTools.ACTION_MX8_UPDATE);
             intent.addFlags(Intent.FLAG_ACTIVITY_PREVIOUS_IS_TOP);
-            intent.putExtra("path",upBean.getFilePath());
+            intent.putExtra("path", upBean.getFilePath());
             FBaseTools.getContext().sendBroadcast(intent);
-            return;
-        }
-        if (FUpgradePool.newInstance().isTaskEnd()) {
-            //判断是否有任务正在执行 有则忽略 无则向下执行
-            FUpgradePool.newInstance().addExecuteTask(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        File file = new File(upBean.getFilePath());
-                        if (file.exists()) {
-                            upBean.getUpInterface().installStatus(I_CHECK);
-                            RecoverySystem.verifyPackage(file, new RecoverySystem.ProgressListener() {
-                                @SuppressLint("WrongConstant")
-                                @Override
-                                public void onProgress(int progress) {
-                                    if (progress == 100) {
-                                        upBean.getUpInterface().installStatus(I_COPY);
-                                        try {
-                                            copyFile(upBean.getFilePath(), SAVA_FW_COPY_PATH);
-                                            upBean.getUpInterface().installStatus(I_INSTALLING);
-                                            FRecoverySystemTools.installPackage(FBaseTools.getContext(), new File(SAVA_FW_COPY_PATH));
-                                        } catch (Throwable e) {
-                                            upBean.getUpInterface().error(e.getMessage());
+        } else {
+            if (FUpgradePool.newInstance().isTaskEnd()) {
+                //判断是否有任务正在执行 有则忽略 无则向下执行
+                FUpgradePool.newInstance().addExecuteTask(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            File file = new File(upBean.getFilePath());
+                            if (file.exists()) {
+                                upBean.getUpInterface().installStatus(FExtraTools.I_CHECK);
+                                RecoverySystem.verifyPackage(file, new RecoverySystem.ProgressListener() {
+                                    @SuppressLint("WrongConstant")
+                                    @Override
+                                    public void onProgress(int progress) {
+                                        if (progress == 100) {
+                                            upBean.getUpInterface().installStatus(FExtraTools.I_COPY);
+                                            try {
+                                                copyFile(upBean.getFilePath(), FExtraTools.SAVA_FW_COPY_PATH);
+                                                upBean.getUpInterface().installStatus(FExtraTools.I_INSTALLING);
+                                                FRecoverySystemTools.installPackage(FBaseTools.getContext(), new File(FExtraTools.SAVA_FW_COPY_PATH));
+                                            } catch (Throwable e) {
+                                                upBean.getUpInterface().error(e.getMessage());
+                                            }
                                         }
                                     }
-                                }
-                            }, null);
-                        } else {
-                            upBean.getUpInterface().error("Firmware does not exist");
+                                }, null);
+                            } else {
+                                upBean.getUpInterface().error(context.getString(R.string.firmware_donot_exist));
+                            }
+                        } catch (Throwable e) {
+                            upBean.getUpInterface().error(e.getMessage());
                         }
-                    } catch (Throwable e) {
-                        upBean.getUpInterface().error(e.getMessage());
                     }
-                }
-            });
-        } else {
-            upBean.getUpInterface().warning("The ota upgrade task has been run, please do not repeat it!");
+                });
+            } else {
+                upBean.getUpInterface().warning(context.getString(R.string.upgrade_task_repeat));
+            }
         }
     }
 
@@ -100,7 +98,6 @@ public class FUpgradeTools {
      * @param newPath 目标地址
      */
     private static void copyFile(String oldPath, String newPath) throws Throwable {
-        //int bytesum = 0;
         int byteread = 0;
         File oldfile = new File(oldPath);
         if (oldfile.exists()) { //文件存在时

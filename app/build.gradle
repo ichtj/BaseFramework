@@ -3,6 +3,14 @@ plugins {
 }
 
 android {
+    signingConfigs {
+        debug {
+            storeFile file('D:\\facefuture.jks')
+            storePassword 'android'
+            keyAlias 'freescale'
+            keyPassword 'android'
+        }
+    }
     compileSdkVersion 30
 
     defaultConfig {
@@ -13,6 +21,7 @@ android {
         versionName "1.0.5"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        signingConfig signingConfigs.debug
     }
 
     buildTypes {

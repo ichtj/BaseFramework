@@ -1,11 +1,13 @@
 package com.chtj.base_framework.upgrade;
 
+import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.graphics.Color;
 import android.os.Handler;
 import android.os.Message;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -13,6 +15,7 @@ import android.view.WindowManager;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import com.chtj.base_framework.FBaseTools;
 import com.chtj.base_framework.R;
 import com.chtj.base_framework.entity.UpgradeBean;
 
@@ -23,6 +26,8 @@ public class FUpgradeDialog {
     private static final String TAG = "FUpgradeDialog";
     private static volatile FUpgradeDialog fDialog;
     private AlertDialog dialog = null;
+    private boolean isShow=false;
+    private String otaPath;
     private ProgressBar progressBar;
     private TextView tvResult;
     private static final int TASK_WARNING = 0x1001;
@@ -30,6 +35,7 @@ public class FUpgradeDialog {
     private static final int TASK_PROGRESS = 0x1003;
 
     Handler mHandler = new Handler() {
+        @SuppressLint("HandlerLeak")
         @Override
         public void handleMessage(Message msg) {
             super.handleMessage(msg);
@@ -37,12 +43,12 @@ public class FUpgradeDialog {
                 case TASK_PROGRESS:
                     tvResult.setTextColor(Color.WHITE);
                     int installStatus = Integer.parseInt(msg.obj.toString());
-                    if (installStatus == FUpgradeTools.I_CHECK) {
-                        tvResult.setText("当前状态：开始检查固件");
-                    } else if (installStatus == FUpgradeTools.I_COPY) {
-                        tvResult.setText("当前状态：开始拷贝固件");
-                    } else if (installStatus == FUpgradeTools.I_INSTALLING) {
-                        tvResult.setText("当前状态：即将进入刷机模式");
+                    if (installStatus == FExtraTools.I_CHECK) {
+                        tvResult.setText(R.string.status_check_firmware);
+                    } else if (installStatus == FExtraTools.I_COPY) {
+                        tvResult.setText(R.string.status_start_copefw);
+                    } else if (installStatus == FExtraTools.I_INSTALLING) {
+                        tvResult.setText(R.string.status_start_writefw);
                         dismissDialog();
                     }
                     break;
@@ -51,7 +57,7 @@ public class FUpgradeDialog {
                     break;
                 case TASK_ERR:
                     tvResult.setTextColor(Color.RED);
-                    tvResult.setText("升级异常："+msg.obj.toString());
+                    tvResult.setText(String.format(FBaseTools.getContext().getString(R.string.status_update_fail),msg.obj.toString()));
                     break;
             }
         }
@@ -60,7 +66,7 @@ public class FUpgradeDialog {
     /**
      * 单例模式
      */
-    public static FUpgradeDialog instance() {
+    private static FUpgradeDialog instance() {
         if (fDialog == null) {
             synchronized (FUpgradeDialog.class) {
                 if (fDialog == null) {
@@ -74,73 +80,82 @@ public class FUpgradeDialog {
     /**
      * 显示ota升级弹出框
      */
-    public void showUpdateDialog(String otaPath, Context context) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(context);
-        View pbView = LayoutInflater.from(context).inflate(R.layout.view_alert, null);
-        builder.setTitle("U盘升级");
-        builder.setMessage("检测到固件包,路径为：" + otaPath);
-        builder.setNegativeButton("取消", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                dialog.dismiss();
-            }
-        });
-        builder.setPositiveButton("确定",null);
-        fDialog.dialog = builder.create();
-        fDialog.dialog.setView(pbView);
-        fDialog.dialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
-            @Override
-            public void onDismiss(DialogInterface dialog) {
-            }
-        });
-        fDialog.dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_SYSTEM_ALERT);
-        fDialog.dialog.show();
-        // dialog弹出后，点击界面其他部分dialog消失
-        fDialog.dialog.setCanceledOnTouchOutside(true);
-        fDialog.progressBar = fDialog.dialog.findViewById(R.id.pbView);
-        fDialog.tvResult = fDialog.dialog.findViewById(R.id.tvResult);
-        //防止点击AlertDialog.BUTTON_POSITIVE 后自动关闭窗口
-        fDialog.dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                progressBar.setVisibility(View.VISIBLE);
-                tvResult.setVisibility(View.VISIBLE);
-                Log.d(TAG, "onClick: setSingleChoiceItems selectPathInfo=" + otaPath);
-                FUpgradeTools.firmwareUpgrade(new UpgradeBean(otaPath, new FUpgradeInterface() {
-                    @Override
-                    public void installStatus(int installStatus) {
-                        Log.d(TAG, "operating:installStatus =" + installStatus);
-                        Message message = mHandler.obtainMessage();
-                        message.what = TASK_PROGRESS;
-                        message.obj = installStatus;
-                        mHandler.sendMessage(message);
-                    }
+    public static void showUpdateDialog(String otaPath, Context context) {
+        if (!instance().isShow){
+            instance().otaPath=otaPath;
+            AlertDialog.Builder builder = new AlertDialog.Builder(context);
+            View pbView = LayoutInflater.from(context).inflate(R.layout.view_alert, null);
+            builder.setTitle(R.string.dialog_title);
+            builder.setMessage(String.format(context.getString(R.string.dialog_chek_otapath),instance().otaPath));
+            builder.setNegativeButton(R.string.dialog_cancel, new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    dialog.dismiss();
+                }
+            });
+            builder.setPositiveButton(R.string.dialog_confirm,null);
+            fDialog.dialog = builder.create();
+            fDialog.dialog.setView(pbView);
+            fDialog.dialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
+                @Override
+                public void onDismiss(DialogInterface dialog) {
+                    instance().isShow=false;
+                }
+            });
+            fDialog.dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_SYSTEM_ALERT);
+            fDialog.dialog.show();
+            fDialog.dialog.setCanceledOnTouchOutside(true);
+            fDialog.progressBar = fDialog.dialog.findViewById(R.id.pbView);
+            fDialog.tvResult = fDialog.dialog.findViewById(R.id.tvResult);
+            fDialog.dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    instance().progressBar.setVisibility(View.VISIBLE);
+                    instance().tvResult.setVisibility(View.VISIBLE);
+                    Log.d(TAG, "onClick: setSingleChoiceItems selectPathInfo=" + instance().otaPath);
+                    FUpgradeTools.firmwareUpgrade(new UpgradeBean(instance().otaPath, new FUpgradeInterface() {
+                        @Override
+                        public void installStatus(int installStatus) {
+                            Log.d(TAG, "operating:installStatus =" + installStatus);
+                            instance().mHandler.sendMessage(instance().mHandler.obtainMessage(TASK_PROGRESS,installStatus));
+                        }
 
-                    @Override
-                    public void error(String error) {
-                        Log.d(TAG, "error:error =" + error);
-                        Message message = mHandler.obtainMessage();
-                        message.what = TASK_ERR;
-                        message.obj = error;
-                        mHandler.sendMessage(message);
-                    }
+                        @Override
+                        public void error(String error) {
+                            Log.d(TAG, "error:error =" + error);
+                            instance().mHandler.sendMessage(instance().mHandler.obtainMessage(TASK_ERR,error));
+                        }
 
-                    @Override
-                    public void warning(String warning) {
-                        Log.d(TAG, "warning:warning = " + warning);
-                        Message message = mHandler.obtainMessage();
-                        message.what = TASK_WARNING;
-                        message.obj = warning;
-                        mHandler.sendMessage(message);
-                    }
-                }));
-            }
-        });
+                        @Override
+                        public void warning(String warning) {
+                            Log.d(TAG, "warning:warning = " + warning);
+                            instance().mHandler.sendMessage(instance().mHandler.obtainMessage(TASK_WARNING,warning));
+                        }
+                    }));
+                }
+            });
+            instance().isShow=true;
+        }
     }
 
-    public void dismissDialog() {
-        if (fDialog.dialog != null) {
-            fDialog.dialog.dismiss();
+    public static void dismissDialog() {
+        if (instance().dialog != null) {
+            instance().dialog.dismiss();
         }
+    }
+
+    public static void dismissDialog(String otaPath) {
+        boolean nowOtaPath=TextUtils.isEmpty(otaPath);
+        boolean oldOtaPath=TextUtils.isEmpty(instance().otaPath);
+        if (nowOtaPath&&oldOtaPath){
+            dismissDialog();
+        }
+        if (!nowOtaPath&&!oldOtaPath&&instance().otaPath.contains(otaPath)){
+            dismissDialog();
+        }
+    }
+
+    public static  boolean isShow(){
+        return instance().isShow;
     }
 }
