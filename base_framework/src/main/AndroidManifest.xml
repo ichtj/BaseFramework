@@ -60,7 +60,6 @@
     <!--自定义ota升级结果接收的广播-->
     <uses-permission android:name="action.firmware.update.result" />
 
-    <uses-sdk android:minSdkVersion="14" />
     <application
         android:allowBackup="true"
         android:persistent="true">
@@ -68,12 +67,20 @@
         <service
             android:name=".upgrade.FUpgradeService"
             android:enabled="true"
-            android:exported="true" />
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.chtj.base_framework.upgrade.service" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </service>
         <!--ota升级广播 用于usb设备接入检测 升级结果回调-->
         <receiver
             android:name=".upgrade.FUpgradeReceiver"
             android:enabled="true"
             android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.CN_OTA_UPDATE" />
+            </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>

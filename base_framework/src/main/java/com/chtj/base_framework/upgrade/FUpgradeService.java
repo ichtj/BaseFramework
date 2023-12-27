@@ -1,5 +1,8 @@
 package com.chtj.base_framework.upgrade;
 
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
@@ -10,6 +13,8 @@ import android.os.Message;
 import android.text.TextUtils;
 import android.util.Log;
 
+import androidx.core.app.NotificationCompat;
+
 import com.chtj.base_framework.FSettingsTools;
 import com.chtj.base_framework.R;
 
@@ -19,13 +24,18 @@ import java.io.File;
  * 固件升级服务管理
  */
 public class FUpgradeService extends Service {
-    private static final String TAG=FUpgradeService.class.getSimpleName();
+    private static final String TAG = FUpgradeService.class.getSimpleName();
+    private static final int NOTIFICATION_ID = 0x001;
 
     public static void startServiceUgrade(Context context, String action, String otaPath) {
         Intent serviceIntent = new Intent(context, FUpgradeService.class);
         serviceIntent.putExtra(FExtraTools.ACTION, action);
         serviceIntent.putExtra(FExtraTools.EXTRA_OTAPATH, otaPath);
-        context.startService(serviceIntent);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            context.startForegroundService(serviceIntent);
+        } else {
+            context.startService(serviceIntent);
+        }
     }
 
     Handler mWorkHandler = new Handler() {
@@ -83,16 +93,16 @@ public class FUpgradeService extends Service {
         switch (action) {
             case FExtraTools.ACTION_USB_CONNECT:
                 String otaPath = intent.getStringExtra(FExtraTools.EXTRA_OTAPATH);
-                if(!TextUtils.isEmpty(otaPath)){
+                if (!TextUtils.isEmpty(otaPath)) {
                     if (new File(otaPath).isDirectory()) {
-                        otaPath = otaPath+File.separator + FExtraTools.OTA_NAME;
+                        otaPath = otaPath + File.separator + FExtraTools.OTA_NAME;
                     }
                     boolean isExist = new File(otaPath).exists();
                     Log.d(TAG, "onStartCommand: otaPath=" + otaPath + ",exist=" + isExist);
                     if (isExist) {
                         FUpgradeDialog.showUpdateDialog(otaPath, FUpgradeService.this);
                     }
-                }else{
+                } else {
                     sendErrReceiver(getString(R.string.otapath_is_null));
                 }
                 break;
@@ -163,6 +173,26 @@ public class FUpgradeService extends Service {
     public void onCreate() {
         super.onCreate();
         Log.d(TAG, "onCreate: ");
+        startNotify();
+    }
+
+    private void startNotify() {
+        // 设置前台通知
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            String channelId = "channel_id";
+            String channelName = "channel_name";
+            NotificationChannel channel = new NotificationChannel(channelId, channelName, NotificationManager.IMPORTANCE_DEFAULT);
+            NotificationManager notificationManager = getSystemService(NotificationManager.class);
+            notificationManager.createNotificationChannel(channel);
+
+            Notification notification = new NotificationCompat.Builder(this, channelId)
+                    .setContentTitle(getString(R.string.firmware_upgrade)) // 设置通知标题
+                    .setContentText(getString(R.string.firmware_upgrade_service_run)) // 设置通知内容
+                    .setSmallIcon(R.drawable.ic_zj) // 设置通知小图标
+                    .build();
+
+            startForeground(NOTIFICATION_ID, notification);
+        }
     }
 
     @Override

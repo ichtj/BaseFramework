@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="firmware_upgrade">固件升级</string>
+    <string name="firmware_upgrade_service_run">固件维护服务运行中...</string>
+    <string name="upgrade_task_repeat">固件升级任务已运行，请勿重复运行！</string>
+    <string name="firmware_donot_exist">固件不存在！</string>
+    <string name="otapath_is_null">otaPath参数为空！</string>
+    <string name="dialog_title">U盘升级</string>
+    <string name="dialog_chek_otapath">检测到固件包,路径为：%s</string>
+    <string name="dialog_cancel">取消</string>
+    <string name="dialog_confirm">确定</string>
+    <string name="same_firmware_version">固件版本一致！</string>
+    <string name="update_zip_low_version">版本升级失败！</string>
+    <string name="version_not_equal">当前的版本与升级的固件版本不一致！</string>
+    <string name="read_last_install_update_fail">last_install文件和last_update文件错误</string>
+    <string name="status_check_firmware">当前状态：开始检查固件</string>
+    <string name="status_start_copefw">当前状态：开始拷贝固件</string>
+    <string name="status_start_writefw">当前状态：即将进入刷机模式</string>
+    <string name="status_update_fail">升级异常：%s</string>
+    <string name="upgrade_operation_tips">升级方法：\n1.将update.zip放置到sdcard根目录下并点击update按钮进行升级。\n2.插入U盘并保证U盘下存在update.zip文件进行弹窗确认升级\n3.发送广播进行升级\n  Intent intent=new Intent(\"android.intent.action.CN_OTA_UPDATE\");\n  intent.putExtra(\"otaPath\",\"/sdcard/update.zip\");\n  sendBroadcast(intent);</string>
+</resources>
