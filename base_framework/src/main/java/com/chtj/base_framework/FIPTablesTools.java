@@ -17,27 +17,12 @@ public class FIPTablesTools {
     // 执行iptables命令并返回执行结果
     public static boolean executeIptablesCommand(String command) {
         try {
-            Log.d(TAG, "executeIptablesCommand: command>>"+command);
-            Process process = Runtime.getRuntime().exec("su");
-            process.getOutputStream().write((command + "\n").getBytes());
-            process.getOutputStream().write("exit\n".getBytes());
-
-            int exitCode = process.waitFor();
-
-            // 读取命令执行结果
-            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-            StringBuilder output = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                output.append(line).append("\n");
-            }
-            // 输出结果
-            Log.d(TAG, output.toString());
-            return exitCode == 0;
+            FCmdTools.CommandResult commandResult=FCmdTools.execCommand(command,true);
+            Log.d(TAG, "executeIptablesCommand: result>>"+commandResult.result+",succMeg>>"+commandResult.successMsg+",errMeg>>"+commandResult.errorMsg);
+            return commandResult.result==0;
         } catch (Throwable e) {
-            e.printStackTrace();
+            return false;
         }
-        return false;
     }
 
     // 禁止应用访问网络
