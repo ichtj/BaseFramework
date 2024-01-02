@@ -41,13 +41,16 @@ public class FUpgradeDialog {
             super.handleMessage(msg);
             switch (msg.what) {
                 case TASK_PROGRESS:
-                    tvResult.setTextColor(Color.WHITE);
+                    tvResult.setTextColor(Color.GRAY);
                     int installStatus = Integer.parseInt(msg.obj.toString());
                     if (installStatus == FExtras.I_CHECK) {
+                        progressBar.setProgress(20);
                         tvResult.setText(R.string.status_check_firmware);
                     } else if (installStatus == FExtras.I_COPY) {
+                        progressBar.setProgress(60);
                         tvResult.setText(R.string.status_start_copefw);
                     } else if (installStatus == FExtras.I_INSTALLING) {
+                        progressBar.setProgress(100);
                         tvResult.setText(R.string.status_start_writefw);
                         dismissDialog();
                     }
