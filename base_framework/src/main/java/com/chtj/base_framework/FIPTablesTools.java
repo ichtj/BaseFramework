@@ -1,16 +1,11 @@
 package com.chtj.base_framework;
 
-import android.content.Context;
 import android.content.pm.ApplicationInfo;
-import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.util.Log;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * iptables 网络访问管理
@@ -22,6 +17,7 @@ public class FIPTablesTools {
     // 执行iptables命令并返回执行结果
     public static boolean executeIptablesCommand(String command) {
         try {
+            Log.d(TAG, "executeIptablesCommand: command>>"+command);
             Process process = Runtime.getRuntime().exec("su");
             process.getOutputStream().write((command + "\n").getBytes());
             process.getOutputStream().write("exit\n".getBytes());

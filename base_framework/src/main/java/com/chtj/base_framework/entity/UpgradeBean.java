@@ -1,14 +1,14 @@
 package com.chtj.base_framework.entity;
 
-import com.chtj.base_framework.upgrade.FUpgradeInterface;
+import com.chtj.base_framework.upgrade.IUpgrade;
 
 public class UpgradeBean {
     private String filePath;
-    private FUpgradeInterface upInterface;
+    private IUpgrade iUpgrade;
 
-    public UpgradeBean(String filePath, FUpgradeInterface upInterface) {
+    public UpgradeBean(String filePath, IUpgrade iUpgrade) {
         this.filePath = filePath;
-        this.upInterface = upInterface;
+        this.iUpgrade = iUpgrade;
     }
 
     public String getFilePath() {
@@ -19,11 +19,11 @@ public class UpgradeBean {
         this.filePath = filePath;
     }
 
-    public FUpgradeInterface getUpInterface() {
-        return upInterface;
+    public IUpgrade getiUpgrade() {
+        return iUpgrade;
     }
 
-    public void setUpInterface(FUpgradeInterface upInterface) {
-        this.upInterface = upInterface;
+    public void setiUpgrade(IUpgrade iUpgrade) {
+        this.iUpgrade = iUpgrade;
     }
 }

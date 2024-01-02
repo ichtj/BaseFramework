@@ -14,13 +14,17 @@ import com.chtj.base_framework.R;
 import com.chtj.base_framework.entity.CommonValue;
 import com.chtj.base_framework.entity.UpgradeBean;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.io.StringReader;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * 更新工具类
@@ -28,7 +32,8 @@ import java.util.List;
  * 请将任务放置到子线程中调用 防止执行超时
  */
 public class FUpgradeTools {
-    private static final String TAG = "FUpgradeTools";
+    private static final String TAG = FUpgradeTools.class.getSimpleName();
+    public static String REGULAR_GET_VERSION = "V[0-9]{1,2}(\\.\\d{1,3})";
 
     public static String getPlatform() {
         FCmdTools.CommandResult commandResult = FCmdTools.execCommand("getprop ro.board.platform", true);
@@ -41,54 +46,111 @@ public class FUpgradeTools {
      * @param upBean
      */
     public static void firmwareUpgrade(UpgradeBean upBean) {
-        String platform=getPlatform();
-        Context context=FBaseTools.getContext();
-        Log.d(TAG, "firmwareUpgrade: platform>>"+platform);
-        if (Build.VERSION.SDK_INT >= 30&&!platform.startsWith("rk356")) {
-            FUpgradeReceiver.setfUpgradeInterface(upBean.getUpInterface());
-            upBean.getUpInterface().installStatus(FExtraTools.I_CHECK);
-            Intent intent = new Intent(FExtraTools.ACTION_MX8_UPDATE);
+        Context context = FBaseTools.getContext();
+        if (FUpgradeTools.isMx8()) {
+            FUpgradeReceiver.setfUpgradeInterface(upBean.getiUpgrade());
+            upBean.getiUpgrade().installStatus(FExtras.I_CHECK);
+            Intent intent = new Intent(FExtras.ACTION_MX8_UPDATE);
             intent.addFlags(Intent.FLAG_ACTIVITY_PREVIOUS_IS_TOP);
             intent.putExtra("path", upBean.getFilePath());
             FBaseTools.getContext().sendBroadcast(intent);
         } else {
-            if (FUpgradePool.newInstance().isTaskEnd()) {
+            if (FUpgradePool.isTaskEnd()) {
                 //判断是否有任务正在执行 有则忽略 无则向下执行
-                FUpgradePool.newInstance().addExecuteTask(new Runnable() {
+                FUpgradePool.addExecuteTask(new Runnable() {
                     @Override
                     public void run() {
                         try {
                             File file = new File(upBean.getFilePath());
                             if (file.exists()) {
-                                upBean.getUpInterface().installStatus(FExtraTools.I_CHECK);
+                                upBean.getiUpgrade().installStatus(FExtras.I_CHECK);
                                 RecoverySystem.verifyPackage(file, new RecoverySystem.ProgressListener() {
                                     @SuppressLint("WrongConstant")
                                     @Override
                                     public void onProgress(int progress) {
                                         if (progress == 100) {
-                                            upBean.getUpInterface().installStatus(FExtraTools.I_COPY);
+                                            upBean.getiUpgrade().installStatus(FExtras.I_COPY);
                                             try {
-                                                copyFile(upBean.getFilePath(), FExtraTools.SAVA_FW_COPY_PATH);
-                                                upBean.getUpInterface().installStatus(FExtraTools.I_INSTALLING);
-                                                FRecoverySystemTools.installPackage(FBaseTools.getContext(), new File(FExtraTools.SAVA_FW_COPY_PATH));
+                                                copyFile(upBean.getFilePath(), FExtras.SAVA_FW_COPY_PATH);
+                                                upBean.getiUpgrade().installStatus(FExtras.I_INSTALLING);
+                                                FRecoverySystemTools.installPackage(FBaseTools.getContext(), new File(FExtras.SAVA_FW_COPY_PATH));
                                             } catch (Throwable e) {
-                                                upBean.getUpInterface().error(e.getMessage());
+                                                upBean.getiUpgrade().error(e.getMessage());
                                             }
                                         }
                                     }
                                 }, null);
                             } else {
-                                upBean.getUpInterface().error(context.getString(R.string.firmware_donot_exist));
+                                upBean.getiUpgrade().error(context.getString(R.string.firmware_donot_exist));
                             }
                         } catch (Throwable e) {
-                            upBean.getUpInterface().error(e.getMessage());
+                            upBean.getiUpgrade().error(e.getMessage());
                         }
                     }
                 });
             } else {
-                upBean.getUpInterface().warning(context.getString(R.string.upgrade_task_repeat));
+                upBean.getiUpgrade().warning(context.getString(R.string.upgrade_task_repeat));
             }
         }
+    }
+
+    /**
+     * 正则表达式通用模型
+     *
+     * @param input 字符串内容
+     * @param regex 正则表达式
+     * @return 符合规则的集合
+     */
+    public static List<String> getMatches(String input, String regex) {
+        List<String> matches = new ArrayList<>();
+        // 编译正则表达式
+        Pattern pattern = Pattern.compile(regex);
+        // 创建Matcher对象
+        Matcher matcher = pattern.matcher(input);
+        // 查找匹配
+        while (matcher.find()) {
+            // 将匹配的部分添加到结果列表
+            matches.add(matcher.group());
+        }
+        return matches;
+    }
+
+    /**
+     * 获取update.zip的固件版本
+     *
+     * @param fwInfo 固件信息
+     * @return 版本
+     */
+    public static String getOtaZipVersion(String fwInfo) {
+        try (BufferedReader reader = new BufferedReader(new StringReader(fwInfo))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.trim().startsWith("post-build=")) {
+                    return FUpgradeTools.getMatches(line, FUpgradeTools.REGULAR_GET_VERSION).get(0).replace("V", "").replace("v", "");
+                }
+            }
+        } catch (Throwable e) {
+        }
+        return "";
+    }
+
+
+    /**
+     * 获取当前固件版本
+     */
+    public static String sysFwVersion() {
+        String upFwVersion = FUpgradeTools.getMatches(Build.DISPLAY, REGULAR_GET_VERSION).get(0);
+        return upFwVersion.replace("V", "").replace("v", "");
+    }
+
+
+    /**
+     * 检查是否为mx8
+     */
+    public static boolean isMx8() {
+        String platform = FUpgradeTools.getPlatform();
+        Log.d(TAG, "checkMx8: platform>>" + platform);
+        return Build.VERSION.SDK_INT >= 30 && !platform.startsWith("rk356");
     }
 
     /**
@@ -165,6 +227,28 @@ public class FUpgradeTools {
         }
     }
 
+    /**
+     * 是否为空
+     *
+     * @param str 字符串
+     * @return true 空 false 非空
+     */
+    public static Boolean isEmpty(String str) {
+        if (str == null || str.length() == 0 || "null".equals(str)) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * 判断obj是否为空
+     */
+    public static boolean isEmpty(Object obj) {
+        if (obj == null || obj.toString().length() == 0 || "null".equals(obj.toString())) {
+            return true;
+        }
+        return false;
+    }
 
     /**
      * App安装升级

@@ -18,4 +18,7 @@
     <string name="status_start_writefw">Current status: About to enter flash mode</string>
     <string name="status_update_fail">Upgrade exception:%s</string>
     <string name="upgrade_operation_tips">Upgrade method：\n1.Place update.zip in the sdcard root directory and click the update button to upgrade。\n2.Insert the USB flash drive and ensure that the update.zip file exists under the USB flash drive and a pop-up window will pop up to confirm the upgrade.\n3.Send broadcast for upgrade\n  Intent intent=new Intent(\"android.intent.action.CN_OTA_UPDATE\");\n  intent.putExtra(\"otaPath\",\"/sdcard/update.zip\");\n  sendBroadcast(intent);</string>
+    <string name="read_fw_version_fail">The firmware version read by the system is abnormal!</string>
+    <string name="zip_read_version_fail">The firmware version read by update.zip is abnormal！</string>
+    <string name="check_version_fail">The upgrade failed, please confirm whether the upgraded firmware package is correct! (version, firmware exception, timestamp, etc.)</string>
 </resources>

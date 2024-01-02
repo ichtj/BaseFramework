@@ -23,7 +23,7 @@ import com.chtj.base_framework.entity.UpgradeBean;
  * @author chtj
  */
 public class FUpgradeDialog {
-    private static final String TAG = "FUpgradeDialog";
+    private static final String TAG=FUpgradeDialog.class.getSimpleName();
     private static volatile FUpgradeDialog fDialog;
     private AlertDialog dialog = null;
     private boolean isShow=false;
@@ -43,11 +43,11 @@ public class FUpgradeDialog {
                 case TASK_PROGRESS:
                     tvResult.setTextColor(Color.WHITE);
                     int installStatus = Integer.parseInt(msg.obj.toString());
-                    if (installStatus == FExtraTools.I_CHECK) {
+                    if (installStatus == FExtras.I_CHECK) {
                         tvResult.setText(R.string.status_check_firmware);
-                    } else if (installStatus == FExtraTools.I_COPY) {
+                    } else if (installStatus == FExtras.I_COPY) {
                         tvResult.setText(R.string.status_start_copefw);
-                    } else if (installStatus == FExtraTools.I_INSTALLING) {
+                    } else if (installStatus == FExtras.I_INSTALLING) {
                         tvResult.setText(R.string.status_start_writefw);
                         dismissDialog();
                     }
@@ -113,7 +113,7 @@ public class FUpgradeDialog {
                     instance().progressBar.setVisibility(View.VISIBLE);
                     instance().tvResult.setVisibility(View.VISIBLE);
                     Log.d(TAG, "onClick: setSingleChoiceItems selectPathInfo=" + instance().otaPath);
-                    FUpgradeTools.firmwareUpgrade(new UpgradeBean(instance().otaPath, new FUpgradeInterface() {
+                    FUpgradeTools.firmwareUpgrade(new UpgradeBean(instance().otaPath, new IUpgrade() {
                         @Override
                         public void installStatus(int installStatus) {
                             Log.d(TAG, "operating:installStatus =" + installStatus);

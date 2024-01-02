@@ -7,7 +7,7 @@ android {
         debug {
             storeFile file('../other/facefuture.jks')
             storePassword 'android'
-            keyAlias 'freescale'
+            keyAlias 'rockchip'
             keyPassword 'android'
         }
     }

@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit;
  * 线程池管理 管理整个项目中所有的线程，所以不能有多个实例对象
  * @author chtj
  */
-public class FUpgradePool {
+class FUpgradePool {
     private static FUpgradePool sFUpgradePool = new FUpgradePool();
 
     /*线程池维护线程的最少数量 核心线程数*/
@@ -32,12 +32,6 @@ public class FUpgradePool {
     /*任务调度周期*/
     private static final int PERIOD_TASK_QOS = 1000;
 
-    /**
-     * 线程池单例创建方法
-     */
-    public static FUpgradePool newInstance() {
-        return sFUpgradePool;
-    }
 
     /**
      * 任务缓冲队列
@@ -106,9 +100,9 @@ public class FUpgradePool {
     /**
      * 向线程池中添加任务方法
      */
-    public void addExecuteTask(Runnable task) {
+    public static void addExecuteTask(Runnable task) {
         if (task != null) {
-            mThreadPool.execute(task);
+            sFUpgradePool.mThreadPool.execute(task);
         }
     }
 
@@ -116,8 +110,8 @@ public class FUpgradePool {
      * 返回正在主动执行任务的线程的大概数量。
      * @return
      */
-    public boolean isTaskEnd() {
-        if (mThreadPool.getActiveCount() == 0) {
+    public static boolean isTaskEnd() {
+        if (sFUpgradePool.mThreadPool.getActiveCount() == 0) {
             return true;
         } else {
             return false;

@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Upgrade</string>
+    <string name="update_sdcard_notfound">not found update.zip</string>
 </resources>

@@ -1,18 +1,19 @@
 package com.chtj.base_framework.upgrade;
 
-public class FExtraTools {
-    public static final String ACTION_UPDATE_RESULT = "android.intent.action.CN_OTA_RESULT";
+public class FExtras {
     public static final String ACTION_UPDATE = "android.intent.action.CN_OTA_UPDATE";
+    public static final String ACTION_UPDATE_RESULT = "android.intent.action.CN_OTA_RESULT";
     public static final String ACTION_MX8_UPDATE = "action.firmware.update.bypath";
     public static final String ACTION_MX8_UPDATE_RESULT = "action.firmware.update.result";
 
-    public static final int OK_RESULT = 0x1001;//固件升级成功
-    public static final int ERR_RESULT = 0x1002;//固件升级失败
+    public static final String RECOVERY_DIR = "/cache/recovery";
+    //private static final String UPDATE_LAST_INSTALL_FILE = RECOVERY_DIR + "last_install";
+    public static final String UPDATE_LAST_UPDATE_FILE = RECOVERY_DIR + "last_update";
+    public static final String UPDATE_ZIP_VERSION_PATH = "META-INF/com/android/metadata";
 
     public static final String OTA_NAME="update.zip";
-    //固件最终存放的地址
-    public static final String SAVA_FW_COPY_PATH = "/data/"+ FExtraTools.OTA_NAME;
-
+    public static final String SAVA_FW_COPY_PATH = "/data/"+ FExtras.OTA_NAME;//固件最终存放的地址
+    public static final String MX8_UPGRADE_RESULT = "/data/misc/.update";
 
     public static final String ACTION="action";
     public static final String ACTION_USB_CONNECT="connect";
@@ -26,11 +27,15 @@ public class FExtraTools {
     public static final String EXTRA_STATUSCODE="statusCode";
     public static final String EXTRA_STATUSSTR="statusStr";
 
-
     /*校验中*/
     public static final int I_CHECK = 0x101;
     /*复制到system/data下*/
     public static final int I_COPY = 0x102;
     /*安装中*/
     public static final int I_INSTALLING = 0x103;
+
+    /*固件升级成功*/
+    public static final int STATUS_OK = 0x1001;
+    /*固件升级失败*/
+    public static final int STATUS_ERR = 0x1002;
 }

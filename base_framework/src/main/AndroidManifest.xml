@@ -78,11 +78,12 @@
             android:name=".upgrade.FUpgradeReceiver"
             android:enabled="true"
             android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.CN_OTA_UPDATE" />
+            <intent-filter android:priority="1000">
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <category android:name="android.intent.category.HOME" />
             </intent-filter>
             <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.CN_OTA_UPDATE" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.MEDIA_MOUNTED" />

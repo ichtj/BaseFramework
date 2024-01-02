@@ -18,4 +18,7 @@
     <string name="status_start_writefw">当前状态：即将进入刷机模式</string>
     <string name="status_update_fail">升级异常：%s</string>
     <string name="upgrade_operation_tips">升级方法：\n1.将update.zip放置到sdcard根目录下并点击update按钮进行升级。\n2.插入U盘并保证U盘下存在update.zip文件进行弹窗确认升级\n3.发送广播进行升级\n  Intent intent=new Intent(\"android.intent.action.CN_OTA_UPDATE\");\n  intent.putExtra(\"otaPath\",\"/sdcard/update.zip\");\n  sendBroadcast(intent);</string>
+    <string name="read_fw_version_fail">系统读取的固件版本异常！</string>
+    <string name="zip_read_version_fail">update.zip读取到的固件版本异常！</string>
+    <string name="check_version_fail">升级失败,请确认升级的固件包是否正确!(版本,固件异常,时间戳等)</string>
 </resources>
