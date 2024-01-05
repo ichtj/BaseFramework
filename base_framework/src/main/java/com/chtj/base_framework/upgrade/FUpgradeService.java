@@ -10,6 +10,7 @@ import android.text.TextUtils;
 import android.util.Log;
 
 import com.chtj.base_framework.R;
+import com.chtj.base_framework.entity.UpgradeBean;
 
 import java.io.File;
 import java.util.Arrays;
@@ -20,10 +21,11 @@ import java.util.Arrays;
 public class FUpgradeService extends Service {
     private static final String TAG = FUpgradeService.class.getSimpleName();
 
-    public static void startServiceUgrade(Context context, String action, String otaPath) {
+    public static void startServiceUgrade(Context context, String action, String upType, String otaPath) {
         Intent serviceIntent = new Intent(context, FUpgradeService.class);
         serviceIntent.putExtra(FExtras.ACTION, action);
         serviceIntent.putExtra(FExtras.EXTRA_OTAPATH, otaPath);
+        serviceIntent.putExtra(FExtras.EXTRA_UP_TYPE, upType);
         context.startService(serviceIntent);
     }
 
@@ -71,7 +73,7 @@ public class FUpgradeService extends Service {
         if (intent != null) {
             String action = intent.getStringExtra(FExtras.ACTION);
             Log.d(TAG, "onStartCommand: action=" + action);
-            if (!FUpgradeTools.isEmpty(action)){
+            if (!FUpgradeTools.isEmpty(action)) {
                 switch (action) {
                     case FExtras.ACTION_USB_CONNECT:
                         String otaPath = intent.getStringExtra(FExtras.EXTRA_OTAPATH);
@@ -80,7 +82,12 @@ public class FUpgradeService extends Service {
                                 otaPath = otaPath + File.separator + FExtras.OTA_NAME;
                             }
                             if (new File(otaPath).exists()) {
-                                FUpgradeDialog.showUpdateDialog(otaPath, FUpgradeService.this);
+                                String upType = intent.getStringExtra(FExtras.EXTRA_UP_TYPE);
+                                if (upType.equals(FExtras.UP_TYPE_DIALOG)) {
+                                    FUpgradeDialog.showUpdateDialog(otaPath, FUpgradeService.this);
+                                } else {
+                                    upgradeSilence(otaPath);
+                                }
                             }
                         } else {
                             sendErrReceiver(getString(R.string.otapath_is_null));
@@ -124,6 +131,26 @@ public class FUpgradeService extends Service {
             }
         }
         return START_NOT_STICKY;
+    }
+
+    public void upgradeSilence(String otaPath) {
+        FUpgradeTools.firmwareUpgrade(new UpgradeBean(otaPath, new IUpgrade() {
+            @Override
+            public void installStatus(int installStatus) {
+                Log.d(TAG, "installStatus: >>"+installStatus);
+            }
+
+            @Override
+            public void error(String error) {
+                sendErrReceiver(error);
+            }
+
+            @Override
+            public void warning(String warning) {
+                Log.d(TAG, "warning: >>"+warning);
+            }
+        }));
+
     }
 
     /**

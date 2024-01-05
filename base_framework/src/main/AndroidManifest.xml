@@ -83,7 +83,7 @@
                 <category android:name="android.intent.category.HOME" />
             </intent-filter>
             <intent-filter>
-                <action android:name="android.intent.action.CN_OTA_UPDATE" />
+                <action android:name="android.intent.action.FS_OTA_UPDATE" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.MEDIA_MOUNTED" />

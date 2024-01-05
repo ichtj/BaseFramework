@@ -10,9 +10,9 @@
     {
       "type": "SINGLE",
       "filters": [],
-      "versionCode": 11,
-      "versionName": "1.0.5",
-      "outputFile": "Upgrade_2023-12-29_v1.0.5.apk"
+      "versionCode": 12,
+      "versionName": "1.0.6",
+      "outputFile": "Upgrade_2024-01-04_v1.0.6.apk"
     }
   ]
 }

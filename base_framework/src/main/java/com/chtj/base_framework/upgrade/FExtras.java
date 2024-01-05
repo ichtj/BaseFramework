@@ -1,8 +1,8 @@
 package com.chtj.base_framework.upgrade;
 
 public class FExtras {
-    public static final String ACTION_UPDATE = "android.intent.action.CN_OTA_UPDATE";
-    public static final String ACTION_UPDATE_RESULT = "android.intent.action.CN_OTA_RESULT";
+    public static final String ACTION_UPDATE = "android.intent.action.FS_OTA_UPDATE";
+    public static final String ACTION_UPDATE_RESULT = "android.intent.action.FS_OTA_RESULT";
     public static final String ACTION_MX8_UPDATE = "action.firmware.update.bypath";
     public static final String ACTION_MX8_UPDATE_RESULT = "action.firmware.update.result";
 
@@ -21,8 +21,12 @@ public class FExtras {
     public static final String ACTION_BOOT_COMPLETE="boot_complete";
 
     public static final String EXTRA_OTAPATH="otaPath";
+    public static final String EXTRA_UP_TYPE="upType";
     public static final String EXTRA_ISCOMPLETE="isComplete";
     public static final String EXTRA_ERRMEG="errMeg";
+
+    public static final String UP_TYPE_DIALOG="dialog";
+    public static final String UP_TYPE_SILENCE="silence";
 
     public static final String EXTRA_STATUSCODE="statusCode";
     public static final String EXTRA_STATUSSTR="statusStr";

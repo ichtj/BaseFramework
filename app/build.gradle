@@ -17,8 +17,8 @@ android {
         applicationId "com.android.upgrade"
         minSdkVersion 19
         targetSdkVersion 30
-        versionCode 11
-        versionName "1.0.5"
+        versionCode 12
+        versionName "1.0.6"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         signingConfig signingConfigs.debug

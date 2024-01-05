@@ -28,12 +28,12 @@ public class FUpgradeReceiver extends BroadcastReceiver {
                     String inOtaPath = intent.getData().toString().replace("file://", "");
                     if (!inOtaPath.contains("storage/emulated")) {//防止系统重启完成之后挂载了sdcard对此服务造成影响
                         Log.d(TAG, "onReceive: inOtaPath=" + inOtaPath);
-                        FUpgradeService.startServiceUgrade(context, FExtras.ACTION_USB_CONNECT, inOtaPath);
+                        FUpgradeService.startServiceUgrade(context, FExtras.ACTION_USB_CONNECT,FExtras.UP_TYPE_DIALOG, inOtaPath);
                     }
                     break;
                 case Intent.ACTION_MEDIA_EJECT://设备卸载
                     String usbPath = intent.getData().getPath();
-                    FUpgradeService.startServiceUgrade(context, FExtras.ACTION_USB_DISCONNECT, usbPath);
+                    FUpgradeService.startServiceUgrade(context, FExtras.ACTION_USB_DISCONNECT,FExtras.UP_TYPE_DIALOG, usbPath);
                     break;
                 case FExtras.ACTION_MX8_UPDATE_RESULT:
                     int errorCode = intent.getIntExtra(FExtras.EXTRA_STATUSCODE, -1);
@@ -50,7 +50,7 @@ public class FUpgradeReceiver extends BroadcastReceiver {
                     break;
                 case FExtras.ACTION_UPDATE:
                     String otaPath = intent.getStringExtra(FExtras.EXTRA_OTAPATH);
-                    FUpgradeService.startServiceUgrade(context, FExtras.ACTION_USB_CONNECT, otaPath);
+                    FUpgradeService.startServiceUgrade(context, FExtras.ACTION_USB_CONNECT,FExtras.UP_TYPE_SILENCE, otaPath);
                     break;
             }
         }
