@@ -20,20 +20,18 @@ public class FUpgradeReceiver extends BroadcastReceiver {
         if (!FUpgradeTools.isEmpty(action)) {
             switch (action) {
                 case Intent.ACTION_BOOT_COMPLETED://开机完成
-                    Intent bootIntent = new Intent(context, FUpgradeService.class);
-                    bootIntent.putExtra(FExtras.ACTION, FExtras.ACTION_BOOT_COMPLETE);
-                    context.startService(bootIntent);
+                    FUpgradeService.startServie(context);
                     break;
                 case Intent.ACTION_MEDIA_MOUNTED://设备接入
                     String inOtaPath = intent.getData().toString().replace("file://", "");
                     if (!inOtaPath.contains("storage/emulated")) {//防止系统重启完成之后挂载了sdcard对此服务造成影响
                         Log.d(TAG, "onReceive: inOtaPath=" + inOtaPath);
-                        FUpgradeService.startServiceUgrade(context, FExtras.ACTION_USB_CONNECT,FExtras.UP_TYPE_DIALOG, inOtaPath);
+                        FUpgradeService.startServiceUgrade(context, FExtras.ACTION_USB_CONNECT, FExtras.UP_TYPE_DIALOG, inOtaPath);
                     }
                     break;
                 case Intent.ACTION_MEDIA_EJECT://设备卸载
                     String usbPath = intent.getData().getPath();
-                    FUpgradeService.startServiceUgrade(context, FExtras.ACTION_USB_DISCONNECT,FExtras.UP_TYPE_DIALOG, usbPath);
+                    FUpgradeService.startServiceUgrade(context, FExtras.ACTION_USB_DISCONNECT, FExtras.UP_TYPE_DIALOG, usbPath);
                     break;
                 case FExtras.ACTION_MX8_UPDATE_RESULT:
                     int errorCode = intent.getIntExtra(FExtras.EXTRA_STATUSCODE, -1);
@@ -50,7 +48,7 @@ public class FUpgradeReceiver extends BroadcastReceiver {
                     break;
                 case FExtras.ACTION_UPDATE:
                     String otaPath = intent.getStringExtra(FExtras.EXTRA_OTAPATH);
-                    FUpgradeService.startServiceUgrade(context, FExtras.ACTION_USB_CONNECT,FExtras.UP_TYPE_SILENCE, otaPath);
+                    FUpgradeService.startServiceUgrade(context, FExtras.ACTION_USB_CONNECT, FExtras.UP_TYPE_SILENCE, otaPath);
                     break;
             }
         }

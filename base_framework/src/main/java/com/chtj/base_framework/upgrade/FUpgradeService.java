@@ -9,6 +9,7 @@ import android.os.Message;
 import android.text.TextUtils;
 import android.util.Log;
 
+import com.chtj.base_framework.FBaseTools;
 import com.chtj.base_framework.R;
 import com.chtj.base_framework.entity.UpgradeBean;
 
@@ -21,12 +22,24 @@ import java.util.Arrays;
 public class FUpgradeService extends Service {
     private static final String TAG = FUpgradeService.class.getSimpleName();
 
+    public static void startServie(Context context){
+        boolean status= FBaseTools.getUpgradeStatus(true);
+        if (status){
+            Intent bootIntent = new Intent(context, FUpgradeService.class);
+            bootIntent.putExtra(FExtras.ACTION, FExtras.ACTION_BOOT_COMPLETE);
+            context.startService(bootIntent);
+        }
+    }
+
     public static void startServiceUgrade(Context context, String action, String upType, String otaPath) {
-        Intent serviceIntent = new Intent(context, FUpgradeService.class);
-        serviceIntent.putExtra(FExtras.ACTION, action);
-        serviceIntent.putExtra(FExtras.EXTRA_OTAPATH, otaPath);
-        serviceIntent.putExtra(FExtras.EXTRA_UP_TYPE, upType);
-        context.startService(serviceIntent);
+        boolean status= FBaseTools.getUpgradeStatus(true);
+        if (status) {
+            Intent serviceIntent = new Intent(context, FUpgradeService.class);
+            serviceIntent.putExtra(FExtras.ACTION, action);
+            serviceIntent.putExtra(FExtras.EXTRA_OTAPATH, otaPath);
+            serviceIntent.putExtra(FExtras.EXTRA_UP_TYPE, upType);
+            context.startService(serviceIntent);
+        }
     }
 
     Handler mHandler = new Handler() {

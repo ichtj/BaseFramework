@@ -2,11 +2,14 @@ package com.chtj.base_framework;
 
 import android.app.Application;
 import android.content.Context;
+import android.content.SharedPreferences;
 
 public final class FBaseTools {
     //全局上下文
     static Context sApp;
     private static volatile FBaseTools sInstance;
+    private static final String NAME = "framework_upgrade";
+    private static final String KEY_UPGRADE = "upgrade";
 
     /**
      * 单例模式
@@ -30,6 +33,27 @@ public final class FBaseTools {
      */
     public void create(Application application) {
         FBaseTools.sApp = application.getApplicationContext();
+    }
+
+    /**
+     * 控制固件升级流程是否启用
+     *
+     * @param status 是否启用更新固件的流程
+     */
+    public static void enableUpgrade(boolean status) {
+        SharedPreferences sharedPreferences = getContext().getSharedPreferences(NAME, Context.MODE_PRIVATE);
+        sharedPreferences.edit().putBoolean(KEY_UPGRADE, status).commit();
+    }
+
+    /**
+     * 获取是否启用固件升级流程
+     *
+     * @param defValue 默认值
+     * @return
+     */
+    public static boolean getUpgradeStatus(Boolean defValue) {
+        SharedPreferences sharedPreferences =getContext().getSharedPreferences(NAME, Context.MODE_PRIVATE);
+        return sharedPreferences.getBoolean(KEY_UPGRADE, defValue);
     }
 
     /**
