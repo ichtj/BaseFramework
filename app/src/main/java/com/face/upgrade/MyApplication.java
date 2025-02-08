@@ -1,4 +1,4 @@
-package com.android.upgrade;
+package com.face.upgrade;
 
 import android.app.Application;
 
@@ -9,5 +9,6 @@ public class MyApplication extends Application {
     public void onCreate() {
         super.onCreate();
         FBaseTools.instance().create(this);
+        FBaseTools.enableUpgrade(true);
     }
 }

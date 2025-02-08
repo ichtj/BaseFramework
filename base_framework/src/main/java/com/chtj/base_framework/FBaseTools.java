@@ -48,12 +48,11 @@ public final class FBaseTools {
     /**
      * 获取是否启用固件升级流程
      *
-     * @param defValue 默认值
      * @return
      */
-    public static boolean getUpgradeStatus(Boolean defValue) {
+    public static boolean getUpgradeStatus() {
         SharedPreferences sharedPreferences =getContext().getSharedPreferences(NAME, Context.MODE_PRIVATE);
-        return sharedPreferences.getBoolean(KEY_UPGRADE, defValue);
+        return sharedPreferences.getBoolean(KEY_UPGRADE, false);
     }
 
     /**

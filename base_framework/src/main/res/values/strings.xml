@@ -5,10 +5,10 @@
     <string name="upgrade_task_repeat">The ota upgrade task has been run, please do not repeat it!</string>
     <string name="firmware_donot_exist">Firmware does not exist</string>
     <string name="otapath_is_null">otaPath is null!</string>
-    <string name="dialog_title">UDisk upgrade</string>
+    <string name="dialog_title">UDisk upgrade(Do not operate the device while upgrading)</string>
     <string name="dialog_chek_otapath">Firmware package detected, path is：%s</string>
     <string name="dialog_cancel">Cancel</string>
-    <string name="dialog_confirm">Confirm</string>
+    <string name="dialog_confirm">Start</string>
     <string name="same_firmware_version">Same firmware version</string>
     <string name="update_zip_low_version">Update.zip Low version</string>
     <string name="version_not_equal">last_install !=1 or currentFwVersion!=upFwVersion</string>
@@ -17,8 +17,10 @@
     <string name="status_start_copefw">Current status: Starting to copy firmware</string>
     <string name="status_start_writefw">Current status: About to enter flash mode</string>
     <string name="status_update_fail">Upgrade exception:%s</string>
-    <string name="upgrade_operation_tips">Upgrade method：\n1.Place update.zip in the sdcard root directory and click the update button to upgrade。\n2.Insert the USB flash drive and ensure that the update.zip file exists under the USB flash drive and a pop-up window will pop up to confirm the upgrade.\n3.Send broadcast for upgrade\n  Intent intent=new Intent(\"android.intent.action.FS_OTA_UPDATE\");\n  intent.putExtra(\"otaPath\",\"/sdcard/update.zip\");\n  sendBroadcast(intent);</string>
+    <string name="status_other_fail">Other exceptions</string>
     <string name="read_fw_version_fail">The firmware version read by the system is abnormal!</string>
     <string name="zip_read_version_fail">The firmware version read by update.zip is abnormal！</string>
     <string name="check_version_fail">The upgrade failed, please confirm whether the upgraded firmware package is correct! (version, firmware exception, timestamp, etc.)</string>
+    <string name="check_low_version_fail">The upgrade failed, the ota package version is an old version</string>
+    <string name="check_benchmark_version_fail">Check that the benchmark package version is incorrect</string>
 </resources>

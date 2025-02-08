@@ -23,7 +23,7 @@ public class FUpgradeService extends Service {
     private static final String TAG = FUpgradeService.class.getSimpleName();
 
     public static void startServie(Context context){
-        boolean status= FBaseTools.getUpgradeStatus(true);
+        boolean status= FBaseTools.getUpgradeStatus();
         if (status){
             Intent bootIntent = new Intent(context, FUpgradeService.class);
             bootIntent.putExtra(FExtras.ACTION, FExtras.ACTION_BOOT_COMPLETE);
@@ -32,7 +32,7 @@ public class FUpgradeService extends Service {
     }
 
     public static void startServiceUgrade(Context context, String action, String upType, String otaPath) {
-        boolean status= FBaseTools.getUpgradeStatus(true);
+        boolean status= FBaseTools.getUpgradeStatus();
         if (status) {
             Intent serviceIntent = new Intent(context, FUpgradeService.class);
             serviceIntent.putExtra(FExtras.ACTION, action);

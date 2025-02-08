@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">SystemUpgrade</string>
+    <string name="update_sdcard_notfound">未在/sdcard/update.zip中查询到固件！</string>
+    <string name="main_pkg">当前包名：%s</string>
+    <string name="sdcard_upgrade">1.将update.zip放置到sdcard根目录下并点击update按钮进行升级[静默]</string>
+    <string name="udisk_upgrade">2.插入U盘并保证U盘下存在update.zip文件进行确认升级[弹窗]</string>
+    <string name="broadcast_upgrade">3.发送广播进行升级[静默]\n  Intent intent=new Intent(\"android.intent.action.FS_OTA_UPDATE\");\n  intent.putExtra(\"otaPath\",\"/sdcard/update.zip\");\n  sendBroadcast(intent);</string>
+    <string name="select_upgrade_operation">选择升级方式</string>
+
+</resources>

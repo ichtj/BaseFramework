@@ -5,10 +5,10 @@
     <string name="upgrade_task_repeat">固件升级任务已运行，请勿重复运行！</string>
     <string name="firmware_donot_exist">固件不存在！</string>
     <string name="otapath_is_null">otaPath参数为空！</string>
-    <string name="dialog_title">U盘升级</string>
+    <string name="dialog_title">U盘升级(升级时请勿操作设备)</string>
     <string name="dialog_chek_otapath">检测到固件包,路径为：%s</string>
     <string name="dialog_cancel">取消</string>
-    <string name="dialog_confirm">确定</string>
+    <string name="dialog_confirm">开始</string>
     <string name="same_firmware_version">固件版本一致！</string>
     <string name="update_zip_low_version">版本升级失败！</string>
     <string name="version_not_equal">当前的版本与升级的固件版本不一致！</string>
@@ -17,8 +17,10 @@
     <string name="status_start_copefw">当前状态：开始拷贝固件</string>
     <string name="status_start_writefw">当前状态：即将进入刷机模式</string>
     <string name="status_update_fail">升级异常：%s</string>
-    <string name="upgrade_operation_tips">升级方法：\n1.将update.zip放置到sdcard根目录下并点击update按钮进行升级。\n2.插入U盘并保证U盘下存在update.zip文件进行弹窗确认升级\n3.发送广播进行升级\n  Intent intent=new Intent(\"android.intent.action.FS_OTA_UPDATE\");\n  intent.putExtra(\"otaPath\",\"/sdcard/update.zip\");\n  sendBroadcast(intent);</string>
+    <string name="status_other_fail">其他异常</string>
     <string name="read_fw_version_fail">系统读取的固件版本异常！</string>
     <string name="zip_read_version_fail">update.zip读取到的固件版本异常！</string>
     <string name="check_version_fail">升级失败,请确认升级的固件包是否正确!(版本,固件异常,时间戳等)</string>
+    <string name="check_low_version_fail">升级失败,OTA包版本为旧版本</string>
+    <string name="check_benchmark_version_fail">检查基准包版本有误</string>
 </resources>

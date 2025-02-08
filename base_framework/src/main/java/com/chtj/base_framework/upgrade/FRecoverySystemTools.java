@@ -8,6 +8,7 @@ package com.chtj.base_framework.upgrade;
 
 import android.content.Context;
 import android.os.RecoverySystem;
+import android.util.Log;
 
 import com.chtj.base_framework.R;
 
@@ -17,30 +18,57 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 
 public class FRecoverySystemTools {
-
-    public static void installPackage(Context context, File packageFile) throws IOException {
+    public static void installPackage(Context context,IUpgrade iUpgrade, File packageFile) throws IOException {
         String readFileInfo = readZipContent(packageFile.getAbsolutePath(), FExtras.UPDATE_ZIP_VERSION_PATH);
-        String otaZipVersion = FUpgradeTools.getOtaZipVersion(readFileInfo);
+        String otaZipVersion = FUpgradeTools.getFirstPkgVersion(readFileInfo);
+        String currFwVersion = FUpgradeTools.sysFwVersion();
+        int versionCount=FUpgradeTools.getPostBuildCount(readFileInfo);
+        List<String> versionList=FUpgradeTools.getPostBuildValues(readFileInfo);
+        if (versionCount==2&&versionList.size()==2){
+            if (!currFwVersion.equals(versionList.get(1))){
+                throw new IOException(context.getString(R.string.check_benchmark_version_fail));
+            }
+        }
         if (!FUpgradeTools.isEmpty(otaZipVersion)) {
-            String sysFwVersion = FUpgradeTools.sysFwVersion();
-            if (!FUpgradeTools.isEmpty(sysFwVersion)) {
-                writeFlagCommand(packageFile.getCanonicalPath(), otaZipVersion, sysFwVersion);
-                File file = new File("/data/misc/app_flag.txt");
-                if (file.exists()) {
-                    file.delete();
+            if (!FUpgradeTools.isEmpty(currFwVersion)) {
+                if (checkVersion(currFwVersion,otaZipVersion)){
+                    writeFlagCommand(packageFile.getCanonicalPath(), otaZipVersion, currFwVersion);
+                    File file = new File("/data/misc/app_flag.txt");
+                    if (file.exists()) {
+                        file.delete();
+                    }
+                    iUpgrade.installStatus(FExtras.I_INSTALLING);
+                    try{
+                        Thread.sleep(1500);
+                    }catch(Throwable throwable){
+                        throwable.printStackTrace();
+                    }
+                    RecoverySystem.installPackage(context, packageFile);
+                }else{
+                    throw new IOException(context.getString(R.string.check_low_version_fail));
                 }
-                RecoverySystem.installPackage(context, packageFile);
             } else {
                 throw new IOException(context.getString(R.string.read_fw_version_fail));
             }
         } else {
             throw new IOException(context.getString(R.string.zip_read_version_fail));
         }
+    }
+
+    public static boolean checkVersion(String currVersion, String otaVersion) {
+        double currInt = Double.parseDouble(currVersion.replace("V",""));
+        double otaInt = Double.parseDouble(otaVersion.replace("V",""));
+        Log.d("fw_upgrade", "checkVersion: currInt>>"+currInt+",otaInt>>"+otaInt);
+        return otaInt > currInt;
     }
 
 

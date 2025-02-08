@@ -1,4 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="update_sdcard_notfound">未在/sdcard/update.zip中查询到固件！</string>
-</resources>

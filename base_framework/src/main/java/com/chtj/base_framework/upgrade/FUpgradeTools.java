@@ -72,8 +72,7 @@ public class FUpgradeTools {
                                             upBean.getiUpgrade().installStatus(FExtras.I_COPY);
                                             try {
                                                 copyFile(upBean.getFilePath(), FExtras.SAVA_FW_COPY_PATH);
-                                                upBean.getiUpgrade().installStatus(FExtras.I_INSTALLING);
-                                                FRecoverySystemTools.installPackage(FBaseTools.getContext(), new File(FExtras.SAVA_FW_COPY_PATH));
+                                                FRecoverySystemTools.installPackage(FBaseTools.getContext(),upBean.getiUpgrade(), new File(FExtras.SAVA_FW_COPY_PATH));
                                             } catch (Throwable e) {
                                                 upBean.getiUpgrade().error(e.getMessage());
                                             }
@@ -116,12 +115,12 @@ public class FUpgradeTools {
     }
 
     /**
-     * 获取update.zip的固件版本
+     * 获取update.zip的固件中的第一个版本信息
      *
      * @param fwInfo 固件信息
      * @return 版本
      */
-    public static String getOtaZipVersion(String fwInfo) {
+    public static String getFirstPkgVersion(String fwInfo) {
         try (BufferedReader reader = new BufferedReader(new StringReader(fwInfo))) {
             String line;
             while ((line = reader.readLine()) != null) {
@@ -133,6 +132,27 @@ public class FUpgradeTools {
         }
         return "";
     }
+
+    public static int getPostBuildCount(String otaData) {
+        Pattern pattern = Pattern.compile(FUpgradeTools.REGULAR_GET_VERSION);
+        Matcher matcher = pattern.matcher(otaData);
+        int count = 0;
+        while (matcher.find()) {
+            count++;
+        }
+        return count;
+    }
+
+    public static List<String> getPostBuildValues(String otaData) {
+        List<String> matches = new ArrayList<>();
+        Pattern pattern = Pattern.compile(FUpgradeTools.REGULAR_GET_VERSION);
+        Matcher matcher = pattern.matcher(otaData);
+        while (matcher.find()) {
+            matches.add(matcher.group().replace("V", "").replace("v", ""));
+        }
+        return matches;
+    }
+
 
 
     /**

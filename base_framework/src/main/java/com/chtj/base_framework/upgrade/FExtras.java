@@ -1,5 +1,9 @@
 package com.chtj.base_framework.upgrade;
 
+import android.content.Context;
+
+import com.chtj.base_framework.R;
+
 public class FExtras {
     public static final String ACTION_UPDATE = "android.intent.action.FS_OTA_UPDATE";
     public static final String ACTION_UPDATE_RESULT = "android.intent.action.FS_OTA_RESULT";
@@ -42,4 +46,18 @@ public class FExtras {
     public static final int STATUS_OK = 0x1001;
     /*固件升级失败*/
     public static final int STATUS_ERR = 0x1002;
+
+
+
+    public static String formatStatus(Context context, int status){
+        if (status==I_CHECK){
+            return context.getString(R.string.status_check_firmware);
+        }else if(status==I_COPY){
+            return context.getString(R.string.status_start_copefw);
+        }else if(status==I_INSTALLING){
+            return context.getString(R.string.status_start_writefw);
+        }else{
+            return context.getString(R.string.status_other_fail);
+        }
+    }
 }

@@ -1,4 +1,4 @@
-package com.android.upgrade;
+package com.face.upgrade;
 
 import android.app.Activity;
 import android.content.pm.PackageManager;

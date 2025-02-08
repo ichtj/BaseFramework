@@ -24,7 +24,6 @@ import java.util.regex.Pattern;
 
 public class FEthTools {
     private static final String TAG = "EthManagerUtils";
-    private final static String nullIpInfo = "0.0.0.0";
 
     /**
      * 开启以太网
@@ -40,6 +39,7 @@ public class FEthTools {
                 ethernetManager.setEnabled(true);
             }
         }catch (Throwable throwable){
+            Log.e(TAG, "openEth: ", throwable);
         }
     }
 
@@ -57,6 +57,7 @@ public class FEthTools {
                 ethernetManager.setEnabled(false);
             }
         }catch (Throwable throwable){
+            Log.e(TAG, "closeEth: ", throwable);
         }
     }
 

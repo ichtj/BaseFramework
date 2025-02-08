@@ -1,4 +1,4 @@
-package com.android.change2;
+package com.face.upgrade;
 
 import org.junit.Test;
 
