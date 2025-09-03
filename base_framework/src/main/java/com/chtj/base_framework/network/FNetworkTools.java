@@ -3,6 +3,7 @@ package com.chtj.base_framework.network;
 import android.content.Context;
 import android.net.INetworkStatsService;
 import android.net.INetworkStatsSession;
+import android.net.NetworkStats;
 import android.net.NetworkStatsHistory;
 import android.net.NetworkTemplate;
 import android.net.TrafficStats;
@@ -192,6 +193,75 @@ public class FNetworkTools {
         //KLog.d(TAG, ">>>total_value1:" + value);
         return value;
     }
+
+    /**
+     * 根据 UID 获取应用 Wi-Fi 流量
+     *
+     * @param uid       应用 UID
+     * @param startTime 开始时间戳
+     * @param endTime   结束时间戳
+     * @return Wi-Fi 上下行总流量（字节）
+     */
+    public static long getWifiAppUsage(int uid, long startTime, long endTime) {
+        long value = 0;
+        try {
+            INetworkStatsService statsService = INetworkStatsService.Stub.asInterface(
+                    ServiceManager.getService(Context.NETWORK_STATS_SERVICE));
+            statsService.forceUpdate(); // 强制刷新
+            INetworkStatsSession statsSession = statsService.openSession();
+
+            // 构建 Wi-Fi 模板
+            NetworkTemplate template = NetworkTemplate.buildTemplateWifiWildcard();
+
+            // 获取该 UID 在 Wi-Fi 上的流量
+            NetworkStatsHistory history = statsSession.getHistoryForUid(template, uid, NetworkStats.SET_ALL, NetworkStats.TAG_NONE,
+                    NetworkStatsHistory.FIELD_RX_BYTES | NetworkStatsHistory.FIELD_TX_BYTES);
+            NetworkStatsHistory.Entry entry = null;
+            entry = history.getValues(startTime, endTime, System.currentTimeMillis(), entry);
+
+            value = entry != null ? entry.rxBytes + entry.txBytes : 0;
+
+            statsSession.close();
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
+        return value;
+    }
+
+    /**
+     * 根据 UID 获取应用 4G 移动数据流量
+     *
+     * @param uid       应用 UID
+     * @param startTime 开始时间戳
+     * @param endTime   结束时间戳
+     * @return 移动数据上下行总流量（字节）
+     */
+    public static long getMobileAppUsage(int uid, long startTime, long endTime) {
+        long value = 0;
+        try {
+            INetworkStatsService statsService = INetworkStatsService.Stub.asInterface(
+                    ServiceManager.getService(Context.NETWORK_STATS_SERVICE));
+            statsService.forceUpdate(); // 强制刷新
+            INetworkStatsSession statsSession = statsService.openSession();
+
+            // 构建移动网络模板
+            NetworkTemplate template = NetworkTemplate.buildTemplateMobileWildcard();
+
+            // 获取该 UID 在移动网络上的流量
+            NetworkStatsHistory history = statsSession.getHistoryForUid(template, uid, NetworkStats.SET_ALL, NetworkStats.TAG_NONE,
+                    NetworkStatsHistory.FIELD_RX_BYTES | NetworkStatsHistory.FIELD_TX_BYTES);
+            NetworkStatsHistory.Entry entry = null;
+            entry = history.getValues(startTime, endTime, System.currentTimeMillis(), entry);
+
+            value = entry != null ? entry.rxBytes + entry.txBytes : 0;
+
+            statsSession.close();
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
+        return value;
+    }
+
 
     /**
      * 获取据当前时间的一个月之前
