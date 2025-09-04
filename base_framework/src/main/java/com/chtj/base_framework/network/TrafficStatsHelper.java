@@ -13,15 +13,14 @@ import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.os.SystemProperties;
 import android.telephony.TelephonyManager;
-
 /**
  * rk3568工具类：根据 uid 和 网络类型 获取流量使用情况
  */
 public class TrafficStatsHelper {
     private static final String TEST_SUBSCRIBER_PROP = "test.subscriberid";
-    public static final int NETWORK_4G = 4;//"4G" networks
-    public static final int NETWORK_ETH = 9;//ETH networks
-    public static final int NETWORK_WIFI = 1;//wifi network
+    public static final int NETWORK_4G = 4;   // "4G" networks
+    public static final int NETWORK_ETH = 9;  // ETH networks
+    public static final int NETWORK_WIFI = 1; // Wi-Fi network
 
     private static final String TAB_3G = "3g";
     private static final String TAB_4G = "4g";
@@ -111,6 +110,47 @@ public class TrafficStatsHelper {
     }
 
     /**
+     * 获取 Wi-Fi 总流量
+     */
+    public long getWifiTotalBytes(long startTime, long endTime) {
+        return getTotalBytesByType(TAB_WIFI, startTime, endTime);
+    }
+
+    /**
+     * 获取以太网总流量
+     */
+    public long getEthTotalBytes(long startTime, long endTime) {
+        return getTotalBytesByType(TAB_ETHERNET, startTime, endTime);
+    }
+
+    /**
+     * 获取 4G 总流量
+     */
+    public long getMobile4GTotalBytes(long startTime, long endTime) {
+        return getTotalBytesByType(TAB_4G, startTime, endTime);
+    }
+
+    /**
+     * 统计指定网络类型的总流量
+     */
+    private long getTotalBytesByType(String netType, long startTime, long endTime) {
+        long total = 0L;
+        try {
+            NetworkTemplate template = buildTemplate(netType);
+            NetworkStats stats = mStatsSession.getSummaryForAllUid(template, startTime, endTime, false);
+            NetworkStats.Entry entry = null;
+            final int size = stats != null ? stats.size() : 0;
+            for (int i = 0; i < size; i++) {
+                entry = stats.getValues(i, entry);
+                total += entry.rxBytes + entry.txBytes;
+            }
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
+        return total;
+    }
+
+    /**
      * 根据包名获取 uid
      */
     public int getUidByPackageName(String packageName) {
@@ -136,10 +176,10 @@ public class TrafficStatsHelper {
      * 关闭 session
      */
     public void close() {
-//        TrafficStats.closeQuietly(mStatsSession);
         mStatsSession = null;
         instance = null;
     }
 }
+
 
 
