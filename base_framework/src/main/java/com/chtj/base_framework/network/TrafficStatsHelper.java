@@ -133,7 +133,7 @@ public class TrafficStatsHelper {
     /**
      * 获取 4G 总流量
      */
-    public long getMobileMoBileTotalBytes(long startTime, long endTime) {
+    public long getMobileTotalBytes(long startTime, long endTime) {
         return getTotalBytesByType(TAB_MOBILE, startTime, endTime);
     }
 
