@@ -3,10 +3,10 @@
     <string name="firmware_upgrade">固件升级</string>
     <string name="firmware_upgrade_service_run">固件维护服务运行中...</string>
     <string name="upgrade_task_repeat">固件升级任务已运行，请勿重复运行！</string>
-    <string name="firmware_donot_exist">固件不存在！</string>
+    <string name="firmware_donot_exist">固件不存在或拷贝失败！</string>
     <string name="otapath_is_null">otaPath参数为空！</string>
     <string name="dialog_title">U盘升级(升级时请勿操作设备)</string>
-    <string name="dialog_chek_otapath">检测到固件包,路径为：%s</string>
+    <string name="dialog_chek_otapath">检测到U盘固件：%s</string>
     <string name="dialog_cancel">取消</string>
     <string name="dialog_confirm">开始</string>
     <string name="same_firmware_version">固件版本一致！</string>
@@ -23,4 +23,8 @@
     <string name="check_version_fail">升级失败,请确认升级的固件包是否正确!(版本,固件异常,时间戳等)</string>
     <string name="check_low_version_fail">升级失败,OTA包版本为旧版本</string>
     <string name="check_benchmark_version_fail">检查基准包版本有误</string>
+    <string name="firmware_not_exist_ext4">不存在匹配类型(ext4)的固件包</string>
+    <string name="unrecognized_filesystem">无法识别当前的文件系统</string>
+    <string name="fw_version_remarks">当前版本:%s,升级包版本:%s</string>
+    <string name="loadding_check_version">待检验..</string>
 </resources>
