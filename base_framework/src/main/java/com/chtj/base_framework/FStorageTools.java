@@ -7,6 +7,7 @@ import android.os.Debug;
 import android.os.Environment;
 import android.os.Process;
 import android.os.StatFs;
+import android.text.TextUtils;
 import android.util.Log;
 
 import com.chtj.base_framework.entity.Space;
@@ -22,7 +23,7 @@ import java.text.DecimalFormat;
  * 存储，空间相关工具类
  */
 public class FStorageTools {
-    private static final String TAG = "FStorageTools";
+    private static final String TAG = FStorageTools.class.getSimpleName();
     public static final String TYPE_B = "B";
     public static final String TYPE_KB = "KB";
     public static final String TYPE_MB = "MB";
@@ -30,37 +31,27 @@ public class FStorageTools {
     public static final String TYPE_TB = "TB";
 
     public static double formatSize(long size, String unit) {
-        double formattedSize = size;
-        String[] units = {"B", "KB", "MB", "GB", "TB"};
-
-        int index = 0;
-        while (formattedSize >= 1024 && index < units.length - 1) {
-            formattedSize /= 1024;
-            index++;
+        double value;
+        switch (unit) {
+            case "B":
+                value = size;
+                break;
+            case "KB":
+                value = size / 1024.0;
+                break;
+            case "MB":
+                value = size / (1024.0 * 1024);
+                break;
+            case "GB":
+                value = size / (1024.0 * 1024 * 1024);
+                break;
+            case "TB":
+                value = size / (1024.0 * 1024 * 1024 * 1024);
+                break;
+            default:
+                value = size;
         }
-        if (unit.equals("B")) {
-            formattedSize *= Math.pow(1024, index);
-            //formattedUnit = units[0];
-        } else if (unit.equals("KB")) {
-            formattedSize *= Math.pow(1024, index - 1);
-            //formattedUnit = units[1];
-        } else if (unit.equals("MB")) {
-            formattedSize *= Math.pow(1024, index - 2);
-            //formattedUnit = units[2];
-        } else if (unit.equals("GB")) {
-            formattedSize *= Math.pow(1024, index - 3);
-            //formattedUnit = units[3];
-        } else if (unit.equals("TB")) {
-            formattedSize *= Math.pow(1024, index - 4);
-            //formattedUnit = units[4];
-        }
-        // 要保留小数点后两位，使用模式"0.00"
-        String pattern = "0.00";
-        DecimalFormat decimalFormat = new DecimalFormat(pattern);
-        // 格式化原始值
-        String formattedValue = decimalFormat.format(formattedSize);
-        // 将格式化后的字符串转换回double
-        return Double.parseDouble(formattedValue);
+        return Math.round(value * 100.0) / 100.0;
     }
 
     /**
@@ -243,5 +234,38 @@ public class FStorageTools {
         double cpuUsagePercentage = ((totalTime - idleTime) / (double) elapsedCpuTime) * 100;
 
         return cpuUsagePercentage;
+    }
+
+    public static String getFileSystemTypeForBlockDevice(String blockPath) {
+        try (BufferedReader reader = new BufferedReader(new FileReader("/proc/mounts"))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+//                Log.d(TAG, "getFileSystemTypeForBlockDevice: line>>"+line);
+                if (line.contains(blockPath)) {
+                    String[] parts = line.split("\\s+");
+                    if (parts.length >= 3) {
+                        return parts[2]; // 第3列是文件系统类型，如 ext4/f2fs
+                    }
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return "unknown";
+    }
+
+    public static int getFileSystem(){
+        try {
+            String realBlockPath = "storage/emulated/0/Android/obb"; // eg: /dev/block/mmcblk2p14
+            Log.d(TAG, "realBlockPath>>"+realBlockPath);
+            String fsType = getFileSystemTypeForBlockDevice(realBlockPath);
+            Log.d(TAG, "Block device " + realBlockPath + " uses file system: " + fsType);
+            if (!TextUtils.isEmpty(fsType)&&(fsType.contains("ext4")||fsType.contains("f2fs"))){
+                return fsType.contains("ext4")?0:1;
+            }
+        } catch (Throwable e) {
+            e.printStackTrace();
+        }
+        return -1;
     }
 }
