@@ -10,31 +10,35 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
-import android.widget.Toast;
 
-import com.chtj.base_framework.entity.CommonValue;
-import com.chtj.base_framework.entity.IpConfigInfo;
+import com.chtj.base_framework.FScreentTools;
+import com.chtj.base_framework.FStorageTools;
 import com.chtj.base_framework.entity.UpgradeBean;
-import com.chtj.base_framework.network.FEthTools;
 import com.chtj.base_framework.upgrade.FExtras;
+import com.chtj.base_framework.upgrade.FUpgradeService;
 import com.chtj.base_framework.upgrade.IUpgrade;
 import com.chtj.base_framework.upgrade.FUpgradeTools;
+import com.face_chtj.base_iotutils.FileDialogSelectUtils;
+import com.face_chtj.base_iotutils.FormatViewUtils;
 
 import java.io.File;
+import java.util.List;
 
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivityInfo";
     private TextView tvPkg;
     private TextView tvRemarks;
+    private TextView tvFwVersion;
+    private TextView tvFileSystem;
     private FwReceiver fwReceiver;
-
     class FwReceiver extends BroadcastReceiver {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -55,20 +59,27 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        tvFileSystem = findViewById(R.id.tvFileSystem);
         tvRemarks = findViewById(R.id.tvRemarks);
         tvPkg = findViewById(R.id.tvPkg);
+        tvFwVersion = findViewById(R.id.tvFwVersion);
+        tvFwVersion.setText(Build.DISPLAY);
         fwReceiver = new FwReceiver();
         IntentFilter filter = new IntentFilter(FExtras.ACTION_UPDATE_RESULT);
         registerReceiver(fwReceiver, filter);
         FormatViewUtils.setMovementMethod(tvRemarks);
         setTitle("" + getString(R.string.app_name) + "：" + getPkgInfo());
+        tvFileSystem.setText(getString(R.string.main_current_filesystem,FStorageTools.getFileSystem()==0?"ext4":"f2fs"));
         tvPkg.setText(getString(R.string.main_pkg, getPackageName()));
         PermissionsUtils.with(this)
                 .addPermission(Manifest.permission.READ_EXTERNAL_STORAGE)
                 .addPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)
                 .addPermission(Manifest.permission.MANAGE_EXTERNAL_STORAGE)
                 .initPermission();
+        FUpgradeService.startServie(this);
+        Log.d(TAG, "onCreate: "+FScreentTools.takeScreenshot());
     }
+
 
     private String getPkgInfo() {
         try {
@@ -82,56 +93,45 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    /**
-     * 打开以太网
-     */
-    public void openEthClick(View view) {
-        FEthTools.openEth();//开启以太网
-    }
-
-    /**
-     * 关闭以太网
-     */
-    public void closeEthClick(View view) {
-        FEthTools.closeEth();//关闭以太网
-    }
-
-    public void dhcpClick(View view) {
-        CommonValue commonValue2 = FEthTools.setEthDhcp();
-        Log.d(TAG, "dhcpClick: " + commonValue2.getRemarks());
-    }
-
-    public void staticClick(View view) {
-        CommonValue commonValue = FEthTools.setStaticIp(new IpConfigInfo("192.168.1.155",
-                "8.8.8.8", "8.8.4.4", "192.168.1.1", "255.255.255.0"));
-        Log.d(TAG, "staticClick: " + commonValue.getRemarks());
-    }
-
     public void updateClick(View view) {
-        String updateFile = "/sdcard/update.zip";
-        if (!new File(updateFile).exists()) {
-            handler.sendMessage(handler.obtainMessage(0x00, getString(R.string.update_sdcard_notfound)));
-        } else {
-            FUpgradeTools.firmwareUpgrade(new UpgradeBean(updateFile, new IUpgrade() {
-                @Override
-                public void installStatus(int installStatus) {
-                    Log.d(TAG, "installStatus: " + installStatus);
-                    handler.sendMessage(handler.obtainMessage(0x00, FExtras.formatStatus(MainActivity.this,installStatus)));
-                }
+        new FileDialogSelectUtils(this, new File("/sdcard/"), new FileDialogSelectUtils.FileSelectCallback() {
+            @Override
+            public void onFileSelected(List<File> selectedFiles) {
+                if (selectedFiles!=null&&selectedFiles.size()>0){
+                    for (int i = 0; i < selectedFiles.size(); i++) {
+                        File updateFile = selectedFiles.get(i);
+                        if (!updateFile.exists()) {
+                            handler.sendMessage(handler.obtainMessage(0x00, getString(R.string.update_sdcard_notfound)));
+                        } else {
+                            FUpgradeTools.firmwareUpgrade(new UpgradeBean(updateFile.getAbsolutePath(), new IUpgrade() {
+                                @Override
+                                public void installStatus(int installStatus) {
+                                    Log.d(TAG, "installStatus: " + installStatus);
+                                    handler.sendMessage(handler.obtainMessage(0x00, FExtras.formatStatus(MainActivity.this,installStatus)));
+                                }
 
-                @Override
-                public void error(String error) {
-                    Log.d(TAG, "error: " + error);
-                    handler.sendMessage(handler.obtainMessage(0x00, "error: " + error));
-                }
+                                @Override
+                                public void error(String error) {
+                                    Log.d(TAG, "error: " + error);
+                                    handler.sendMessage(handler.obtainMessage(0x00, "error: " + error));
+                                }
 
-                @Override
-                public void warning(String warning) {
-                    Log.d(TAG, "warning: " + warning);
-                    handler.sendMessage(handler.obtainMessage(0x00, "warning: " + warning));
+                                @Override
+                                public void warning(String warning) {
+                                    Log.d(TAG, "warning: " + warning);
+                                    handler.sendMessage(handler.obtainMessage(0x00, "warning: " + warning));
+                                }
+
+                                @Override
+                                public void upFwVersion(String version) {
+                                    Log.d(TAG, "upFwVersion: version>>"+version);
+                                }
+                            }));
+                        }
+                    }
                 }
-            }));
-        }
+            }
+        }).setSizeRatio(0.5f,0.5f).setSingleSelect(true).show();
     }
 
     Handler handler = new Handler() {

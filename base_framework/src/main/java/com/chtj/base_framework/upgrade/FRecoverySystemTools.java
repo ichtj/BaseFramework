@@ -10,27 +10,38 @@ import android.content.Context;
 import android.os.RecoverySystem;
 import android.util.Log;
 
+import com.chtj.base_framework.FUtils;
 import com.chtj.base_framework.R;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
+import java.util.zip.ZipInputStream;
 
 
 public class FRecoverySystemTools {
-    public static void installPackage(Context context,IUpgrade iUpgrade, File packageFile) throws IOException {
+    private static final String TAG = FRecoverySystemTools.class.getSimpleName();
+    public static void installPackage(Context context,IUpgrade iUpgrade, File packageFile) throws Throwable {
         String readFileInfo = readZipContent(packageFile.getAbsolutePath(), FExtras.UPDATE_ZIP_VERSION_PATH);
         String otaZipVersion = FUpgradeTools.getFirstPkgVersion(readFileInfo);
-        String currFwVersion = FUpgradeTools.sysFwVersion();
+        iUpgrade.upFwVersion(otaZipVersion);
+        Thread.sleep(1500);
+        String currFwVersion = FUtils.sysFwVersion();
         int versionCount=FUpgradeTools.getPostBuildCount(readFileInfo);
         List<String> versionList=FUpgradeTools.getPostBuildValues(readFileInfo);
         if (versionCount==2&&versionList.size()==2){
@@ -38,8 +49,8 @@ public class FRecoverySystemTools {
                 throw new IOException(context.getString(R.string.check_benchmark_version_fail));
             }
         }
-        if (!FUpgradeTools.isEmpty(otaZipVersion)) {
-            if (!FUpgradeTools.isEmpty(currFwVersion)) {
+        if (!FUtils.isEmpty(otaZipVersion)) {
+            if (!FUtils.isEmpty(currFwVersion)) {
                 if (checkVersion(currFwVersion,otaZipVersion)){
                     writeFlagCommand(packageFile.getCanonicalPath(), otaZipVersion, currFwVersion);
                     File file = new File("/data/misc/app_flag.txt");
@@ -47,11 +58,7 @@ public class FRecoverySystemTools {
                         file.delete();
                     }
                     iUpgrade.installStatus(FExtras.I_INSTALLING);
-                    try{
-                        Thread.sleep(1500);
-                    }catch(Throwable throwable){
-                        throwable.printStackTrace();
-                    }
+                    Thread.sleep(1500);
                     RecoverySystem.installPackage(context, packageFile);
                 }else{
                     throw new IOException(context.getString(R.string.check_low_version_fail));
@@ -92,12 +99,79 @@ public class FRecoverySystemTools {
             }
             return result.toString();
         } catch (Exception e) {
+            Log.e(TAG, "readZipContent: ", e);
         }
         return "";
     }
 
+    /**
+     * 提取 update_ext4.zip（字节数组）从最外层 update.zip 中
+     */
+    public static boolean extractInnerZipToFile(File updateZipFile, String entryName, File outZipFile) {
+        try (ZipFile zipFile = new ZipFile(updateZipFile)) {
+            ZipEntry entry = zipFile.getEntry(entryName);
+            if (entry == null) {
+                Log.e(TAG, "Entry not found: " + entryName);
+                return false;
+            }
+
+            // 创建父目录
+            File parentDir = outZipFile.getParentFile();
+            if (parentDir != null && !parentDir.exists()) {
+                parentDir.mkdirs();
+            }
+
+            try (InputStream is = zipFile.getInputStream(entry);
+                 FileOutputStream fos = new FileOutputStream(outZipFile)) {
+                byte[] buffer = new byte[4096];
+                int len;
+                while ((len = is.read(buffer)) != -1) {
+                    fos.write(buffer, 0, len);
+                }
+            }
+
+            Log.i(TAG, "Saved to: " + outZipFile.getAbsolutePath());
+            return true;
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
+     * 复制文件到data目录下
+     *
+     * @param oldPath 源地址
+     * @param newPath 目标地址
+     */
+    public static boolean copyFile(String oldPath, String newPath) throws Throwable {
+        int byteread = 0;
+        File oldfile = new File(oldPath);
+        if (oldfile.exists()) { //文件存在时
+            InputStream inStream = new FileInputStream(oldPath); //读入原文件
+            FileOutputStream fs = new FileOutputStream(newPath);
+            byte[] buffer = new byte[1444];
+            while ((byteread = inStream.read(buffer)) != -1) {
+                //bytesum += byteread;
+                fs.write(buffer, 0, byteread);
+            }
+            inStream.close();
+            try {
+                Class<?> c = Class.forName("android.os.SystemProperties");
+                Method set = c.getMethod("set", String.class, String.class);
+                set.invoke(c, "persist.sys.firstRun", "true");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            Log.d(TAG, "copyFile: finsh complete!");
+            return true;
+        }
+        return false;
+    }
+
     public static String readLastUpdateCommand() {
-        return FUpgradeTools.readFileData(FExtras.UPDATE_LAST_UPDATE_FILE);
+        return FUtils.readFileData(FExtras.UPDATE_LAST_UPDATE_FILE);
     }
 
     public static void writeFlagCommand(String path, String upFwVersion, String currentFwVersion) throws IOException {

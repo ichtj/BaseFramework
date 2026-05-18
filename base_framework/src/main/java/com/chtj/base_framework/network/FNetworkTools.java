@@ -1,238 +1,179 @@
 package com.chtj.base_framework.network;
 
 import android.content.Context;
-import android.net.INetworkStatsService;
-import android.net.INetworkStatsSession;
-import android.net.NetworkStats;
-import android.net.NetworkStatsHistory;
-import android.net.NetworkTemplate;
-import android.net.TrafficStats;
-import android.os.Build;
-import android.os.RemoteException;
-import android.os.ServiceManager;
-import android.telephony.PhoneStateListener;
-import android.telephony.SignalStrength;
-import android.telephony.TelephonyManager;
-import android.text.format.Formatter;
+import android.os.IBinder;
 import android.util.Log;
 
-import com.chtj.base_framework.FBaseTools;
-import com.chtj.base_framework.FCmdTools;
-
 import java.lang.reflect.Method;
-import java.util.Calendar;
-import java.util.Date;
-
-import static android.net.NetworkStats.SET_ALL;
-import static android.net.NetworkStats.TAG_NONE;
-import static android.net.NetworkStatsHistory.FIELD_RX_BYTES;
-import static android.net.NetworkStatsHistory.FIELD_TX_BYTES;
 
 public class FNetworkTools {
     private static final String TAG = "FNetworkTools";
-
-    /**
-     * 获取dns
-     *
-     * @return
-     */
-    public static String[] getNetWorkDns() {
-        FCmdTools.CommandResult commandResult = FCmdTools.execCommand("getprop | grep net.dns", true);
-        if (commandResult.result == 0 && commandResult.successMsg != null) {
-            if (commandResult.successMsg.length() > 0) {
-                String[] result = commandResult.successMsg.replace("]: [", ":").replace("][", "];[").split(";");
-                return result;
-            } else {
-                return null;
-            }
-        } else {
-            return null;
-        }
-    }
-
     /**
      * 获取该uid的流量消耗
      *
      * @param uid 应用uid
      * @return
      */
-    public static String getEthUsage(int uid) {
-        int sdk = Build.VERSION.SDK_INT;
-        if (sdk >= 24) {
-            long total = getEthAppUsage(uid, getTimesMonthMorning(), getNow());
-            String totalPhrase = Formatter.formatFileSize(FBaseTools.getContext(), total);
-            return totalPhrase;
-        } else {
-            long receiveRx = TrafficStats.getUidRxBytes(uid);//获取某个网络UID的接受字节数 总接收量
-            long sendTx = TrafficStats.getUidTxBytes(uid);//获取某个网络UID的发送字节数 总接收量
-            double traffic = receiveRx + sendTx;
-            double sumTraffic = getDouble(traffic / 1024 / 1024);
-            return sumTraffic + "MB";
-        }
-    }
-
-    public static double getDouble(double d) {
-        return (double) Math.round(d * 100) / 100;
-    }
-
     /**
-     * 获取系统总计消耗的以太网流量
+     * 获取流量使用情况
+     * @param type 0: Ethernet, 1: WiFi, 2: Mobile
+     * @param uid 应用UID
+     * @param startTime 开始时间 单位：毫秒
+     * @param endTime 结束时间 单位：毫秒
+     * @return 流量使用总和，单位：字节
      */
-    public static long getEthTotalUsage(long startTime, final long endTime) {
-        long value = 0;
+    public static long getUsageByReflection(
+            Context context, int type, int uid, long startTime, long endTime) {
+        Object statsSession = null;
         try {
-            INetworkStatsService mStatsService = INetworkStatsService.Stub.asInterface(ServiceManager.getService(Context.NETWORK_STATS_SERVICE));
-            mStatsService.forceUpdate();
-            INetworkStatsSession mStatsSession = mStatsService.openSession();
-            NetworkTemplate mTemplate = NetworkTemplate.buildTemplateEthernet();
-            NetworkStatsHistory networkStatsHistory = mStatsSession.getHistoryForNetwork(mTemplate, NetworkStatsHistory.FIELD_ALL);
-            NetworkStatsHistory.Entry entry = null;
-            entry = networkStatsHistory.getValues(startTime, endTime, System.currentTimeMillis(), entry);
-            value = entry != null ? entry.rxBytes + entry.txBytes : 0;
-            mStatsSession.close();
-        } catch (RemoteException e) {
+            Log.d(TAG, "getUsageByReflection type=" + type + ", uid=" + uid
+                    + ", startTime=" + startTime + ", endTime=" + endTime);
+
+            Class<?> smClazz = Class.forName("android.os.ServiceManager");
+            Method getServiceMethod = smClazz.getMethod("getService", String.class);
+            IBinder binder = (IBinder) getServiceMethod.invoke(null, "netstats");
+            if (binder == null) return 0;
+
+            Class<?> stubClazz = Class.forName("android.net.INetworkStatsService$Stub");
+            Method asInterfaceMethod = stubClazz.getMethod("asInterface", IBinder.class);
+            Object statsService = asInterfaceMethod.invoke(null, binder);
+            if (statsService == null) return 0;
+
+            try {
+                statsService.getClass().getMethod("forceUpdate").invoke(statsService);
+            } catch (Throwable e) {
+                Log.w(TAG, "forceUpdate failed, continue", e);
+            }
+
+            statsSession = statsService.getClass().getMethod("openSession").invoke(statsService);
+
+            Class<?> templateClazz = Class.forName("android.net.NetworkTemplate");
+            Object template;
+
+            if (type == 0) {
+                template = templateClazz.getMethod("buildTemplateEthernet").invoke(null);
+            } else if (type == 1) {
+                template = templateClazz.getMethod("buildTemplateWifiWildcard").invoke(null);
+            } else {
+                String subscriberId = getDefaultSubscriberId(context);
+                Log.d(TAG, "mobile subscriberId=" + (subscriberId == null ? "null" : "not-null"));
+
+                if (subscriberId == null || subscriberId.length() == 0) {
+                    Log.e(TAG, "4G usage query failed: subscriberId is null");
+                    return 0;
+                }
+
+                template = templateClazz
+                        .getMethod("buildTemplateMobileAll", String.class)
+                        .invoke(null, subscriberId);
+            }
+
+            int fields = 0x02 | 0x08; // FIELD_RX_BYTES | FIELD_TX_BYTES
+
+            Method getHistoryMethod = statsSession.getClass().getMethod(
+                    "getHistoryForUid",
+                    templateClazz,
+                    int.class,
+                    int.class,
+                    int.class,
+                    int.class
+            );
+
+            Object history = getHistoryMethod.invoke(
+                    statsSession,
+                    template,
+                    uid,
+                    -1,
+                    0,
+                    fields
+            );
+
+            Class<?> entryClazz = Class.forName("android.net.NetworkStatsHistory$Entry");
+            Method getValuesMethod = history.getClass().getMethod(
+                    "getValues",
+                    long.class,
+                    long.class,
+                    long.class,
+                    entryClazz
+            );
+
+            Object entry = getValuesMethod.invoke(
+                    history,
+                    startTime,
+                    endTime,
+                    System.currentTimeMillis(),
+                    null
+            );
+
+            if (entry == null) return 0;
+
+            long rx = entry.getClass().getField("rxBytes").getLong(entry);
+            long tx = entry.getClass().getField("txBytes").getLong(entry);
+            return rx + tx;
+        } catch (Throwable e) {
+            Log.e(TAG, "反射获取流量失败", e);
+            return 0;
+        } finally {
+            if (statsSession != null) {
+                try {
+                    statsSession.getClass().getMethod("close").invoke(statsSession);
+                } catch (Throwable e) {
+                    Log.w(TAG, "close NetworkStatsSession failed", e);
+                }
+            }
         }
-        return value;
     }
 
-    /**
-     * 获取系统总计消耗的移动数据流量
-     */
-    public static long getMobileTotalUsage(long startTime, long endTime) {
-        long value = 0;
+    private static String getDefaultSubscriberId(Context context) {
         try {
-            INetworkStatsService mStatsService = INetworkStatsService.Stub.asInterface(ServiceManager.getService(Context.NETWORK_STATS_SERVICE));
-            mStatsService.forceUpdate();
-            INetworkStatsSession mStatsSession = mStatsService.openSession();
-            NetworkTemplate mTemplate = NetworkTemplate.buildTemplateMobileWildcard();
-            NetworkStatsHistory networkStatsHistory = mStatsSession.getHistoryForNetwork(mTemplate, NetworkStatsHistory.FIELD_RX_BYTES | NetworkStatsHistory.FIELD_TX_BYTES);
-            NetworkStatsHistory.Entry entry = null;
-            entry = networkStatsHistory.getValues(startTime, endTime, System.currentTimeMillis(), entry);
-            value = entry != null ? entry.rxBytes + entry.txBytes : 0;
-            mStatsSession.close();
-        } catch (RemoteException e) {
+            int subId = -1;
+            try {
+                Class<?> subMgrClass = Class.forName("android.telephony.SubscriptionManager");
+                Method getDefaultDataSubId =
+                        subMgrClass.getMethod("getDefaultDataSubscriptionId");
+                Object value = getDefaultDataSubId.invoke(null);
+                if (value instanceof Integer) {
+                    subId = (Integer) value;
+                }
+            } catch (Throwable e) {
+                Log.w(TAG, "get default data subId failed", e);
+            }
+
+            Object telephonyManager = context.getSystemService(Context.TELEPHONY_SERVICE);
+            if (telephonyManager == null) return null;
+
+            Class<?> tmClass = Class.forName("android.telephony.TelephonyManager");
+
+            if (subId >= 0) {
+                try {
+                    Method createForSubId =
+                            tmClass.getMethod("createForSubscriptionId", int.class);
+                    telephonyManager = createForSubId.invoke(telephonyManager, subId);
+                } catch (Throwable e) {
+                    Log.w(TAG, "createForSubscriptionId failed, use default TelephonyManager", e);
+                }
+            }
+
+            try {
+                Method getSubscriberId = telephonyManager.getClass().getMethod("getSubscriberId");
+                return (String) getSubscriberId.invoke(telephonyManager);
+            } catch (Throwable e) {
+                Log.w(TAG, "TelephonyManager.getSubscriberId failed", e);
+            }
+
+            if (subId >= 0) {
+                try {
+                    Method getSubscriberIdWithSubId =
+                            telephonyManager.getClass().getMethod("getSubscriberId", int.class);
+                    return (String) getSubscriberIdWithSubId.invoke(telephonyManager, subId);
+                } catch (Throwable e) {
+                    Log.w(TAG, "TelephonyManager.getSubscriberId(subId) failed", e);
+                }
+            }
+        } catch (Throwable e) {
+            Log.w(TAG, "getDefaultSubscriberId failed", e);
         }
-        return value;
-    }
-
-    /**
-     * 获取系统总计消耗的 Wi-Fi 流量
-     */
-    public static long getWifiTotalUsage(long startTime, long endTime) {
-        long value = 0;
-        try {
-            INetworkStatsService mStatsService = INetworkStatsService.Stub.asInterface(
-                    ServiceManager.getService(Context.NETWORK_STATS_SERVICE));
-            mStatsService.forceUpdate();
-            INetworkStatsSession mStatsSession = mStatsService.openSession();
-            NetworkTemplate mTemplate = NetworkTemplate.buildTemplateWifiWildcard();
-            NetworkStatsHistory history = mStatsSession.getHistoryForNetwork(mTemplate,
-                    NetworkStatsHistory.FIELD_RX_BYTES | NetworkStatsHistory.FIELD_TX_BYTES);
-            NetworkStatsHistory.Entry entry = null;
-            entry = history.getValues(startTime, endTime, System.currentTimeMillis(), entry);
-            value = entry != null ? entry.rxBytes + entry.txBytes : 0;
-            mStatsSession.close();
-        } catch (RemoteException e) {
-            e.printStackTrace();
-        }
-        return value;
-    }
-
-    /**
-     * 根据UID获取该应用的以太网上下行流量
-     */
-    public static long getEthAppUsage(int uid, long startTime, long endTime) {
-        long value = 0;
-        try {
-            INetworkStatsService mStatsService = INetworkStatsService.Stub.asInterface(ServiceManager.getService(Context.NETWORK_STATS_SERVICE));
-            mStatsService.forceUpdate();
-            INetworkStatsSession mStatsSession = mStatsService.openSession();
-            NetworkTemplate mTemplate = NetworkTemplate.buildTemplateEthernet();
-            NetworkStatsHistory networkStatsHistory = mStatsSession.getHistoryForUid(mTemplate, uid, SET_ALL, TAG_NONE, FIELD_RX_BYTES | FIELD_TX_BYTES);
-
-            NetworkStatsHistory.Entry entry = null;
-            entry = networkStatsHistory.getValues(startTime, endTime, System.currentTimeMillis(), entry);
-            value = entry != null ? entry.rxBytes + entry.txBytes : 0;
-            mStatsSession.close();
-        } catch (RemoteException e) {
-            e.printStackTrace();
-        }
-        return value;
-    }
-
-    /**
-     * 根据 UID 获取应用 Wi-Fi 流量
-     */
-    public static long getWifiAppUsage(int uid, long startTime, long endTime) {
-        long value = 0;
-        try {
-            INetworkStatsService statsService = INetworkStatsService.Stub.asInterface(
-                    ServiceManager.getService(Context.NETWORK_STATS_SERVICE));
-            statsService.forceUpdate();
-            INetworkStatsSession statsSession = statsService.openSession();
-            NetworkTemplate template = NetworkTemplate.buildTemplateWifiWildcard();
-            NetworkStatsHistory history = statsSession.getHistoryForUid(template, uid, NetworkStats.SET_ALL, NetworkStats.TAG_NONE,
-                    NetworkStatsHistory.FIELD_RX_BYTES | NetworkStatsHistory.FIELD_TX_BYTES);
-            NetworkStatsHistory.Entry entry = null;
-            entry = history.getValues(startTime, endTime, System.currentTimeMillis(), entry);
-            value = entry != null ? entry.rxBytes + entry.txBytes : 0;
-            statsSession.close();
-        } catch (RemoteException e) {
-            e.printStackTrace();
-        }
-        return value;
-    }
-
-    /**
-     * 根据 UID 获取应用移动数据流量
-     */
-    public static long getMobileAppUsage(int uid, long startTime, long endTime) {
-        long value = 0;
-        try {
-            INetworkStatsService statsService = INetworkStatsService.Stub.asInterface(
-                    ServiceManager.getService(Context.NETWORK_STATS_SERVICE));
-            statsService.forceUpdate();
-            INetworkStatsSession statsSession = statsService.openSession();
-            NetworkTemplate template = NetworkTemplate.buildTemplateMobileWildcard();
-            NetworkStatsHistory history = statsSession.getHistoryForUid(template, uid, NetworkStats.SET_ALL, NetworkStats.TAG_NONE,
-                    NetworkStatsHistory.FIELD_RX_BYTES | NetworkStatsHistory.FIELD_TX_BYTES);
-            NetworkStatsHistory.Entry entry = null;
-            entry = history.getValues(startTime, endTime, System.currentTimeMillis(), entry);
-            value = entry != null ? entry.rxBytes + entry.txBytes : 0;
-            statsSession.close();
-        } catch (RemoteException e) {
-            e.printStackTrace();
-        }
-        return value;
-    }
-
-    /**
-     * 获取据当前时间的一个月之前
-     */
-    public static long getTimesMonthMorning() {
-        Date currentTime = new Date();
-        long now = currentTime.getTime();
-        currentTime = new Date(now - 86400000 * 24);
-        long now1 = currentTime.getTime();
-        currentTime = new Date(now1 - 86400000 * 6);
-        return currentTime.getTime();
-    }
-
-    /**
-     * 获取昨天的时间戳
-     */
-    public static long getYesterDayTime() {
-        long nowTime = System.currentTimeMillis();
-        long yesterdayTime = nowTime - 86400000;
-        return yesterdayTime;
-    }
-
-    /**
-     * 得到现在的时间戳
-     */
-    public static long getNow() {
-        long lTime = Calendar.getInstance().getTimeInMillis();
-        return lTime;
+        return null;
     }
 }
 

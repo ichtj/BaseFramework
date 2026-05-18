@@ -2,8 +2,16 @@
     <string name="app_name">SystemUpgrade</string>
     <string name="update_sdcard_notfound">not found update.zip [/sdcard/update.zip]</string>
     <string name="main_pkg">Current package name：%s</string>
-    <string name="sdcard_upgrade">1. Place update.zip in the sdcard root directory and click the update button to upgrade[silence]</string>
+    <string name="sdcard_upgrade">1. Place update.zip in the root directory of sdcard and select the specified firmware upgrade package to upgrade[silence]</string>
     <string name="udisk_upgrade">2. Insert the U disk and ensure that the update.zip file exists under the U disk to confirm the upgrade [Pop-up window]</string>
     <string name="broadcast_upgrade">3.Send broadcast for upgrade[silence].\n  Intent intent=new Intent(\"android.intent.action.FS_OTA_UPDATE\");\n  intent.putExtra(\"otaPath\",\"/sdcard/update.zip\");\n  sendBroadcast(intent);</string>
     <string name="select_upgrade_operation">select an upgrade method</string>
+    <string name="main_current_version">Current FirmwareVersion:%s</string>
+    <string name="sign_match_firmware"><font color="#FF0000">*</font>The signature in the firmware needs to match the current system firmware</string>
+    <string name="update_load_finish"><font color="#FF0000">*</font>Please do not operate the system interface during firmware upgrade process, wait for the upgrade to complete</string>
+    <string name="check_file_damage"><font color="#FF0000">*</font>Check whether the update.zip file is corrupt when upgrading using USB flash drive</string>
+    <string name="exception_notify"><font color="#FF0000">*</font>When the firmware upgrade exception cannot enter the system, please keep the phenomenon during the upgrade exception and inform our company to handle it.</string>
+    <string name="stable_usb_data"><font color="#FF0000">*</font>Use a stable USB cable or charger</string>
+    <string name="things_to_note">Things to note:</string>
+    <string name="main_current_filesystem">Current file system:%s</string>
 </resources>

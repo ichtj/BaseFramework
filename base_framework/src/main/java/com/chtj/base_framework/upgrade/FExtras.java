@@ -15,8 +15,10 @@ public class FExtras {
     public static final String UPDATE_LAST_UPDATE_FILE = RECOVERY_DIR + "last_update";
     public static final String UPDATE_ZIP_VERSION_PATH = "META-INF/com/android/metadata";
 
+    public static final String OTA_EXT4_NAME = "update_ext4.zip";
     public static final String OTA_NAME="update.zip";
     public static final String SAVA_FW_COPY_PATH = "/data/"+ FExtras.OTA_NAME;//固件最终存放的地址
+    public static final String SAVA_FW_COPY_EXT4_PATH = "/data/"+ FExtras.OTA_EXT4_NAME;//固件最终存放的地址
     public static final String MX8_UPGRADE_RESULT = "/data/misc/.update";
 
     public static final String ACTION="action";

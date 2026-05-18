@@ -17,4 +17,10 @@ public interface IUpgrade {
      * 警告信息
      */
     void warning(String warning);
+
+    /**
+     * 升级的固件版本
+     * @param version
+     */
+    void upFwVersion(String version);
 }

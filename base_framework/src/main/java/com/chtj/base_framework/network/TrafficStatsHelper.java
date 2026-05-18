@@ -2,14 +2,10 @@ package com.chtj.base_framework.network;
 
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
-import android.content.pm.PackageManager;
-import android.net.ConnectivityManager;
 import android.net.INetworkStatsService;
 import android.net.INetworkStatsSession;
 import android.net.NetworkStats;
 import android.net.NetworkTemplate;
-import android.net.TrafficStats;
-import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.os.SystemProperties;
 import android.telephony.TelephonyManager;
@@ -42,7 +38,7 @@ public class TrafficStatsHelper {
             mStatsService = INetworkStatsService.Stub.asInterface(
                     ServiceManager.getService(Context.NETWORK_STATS_SERVICE));
             mStatsSession = mStatsService.openSession();
-        } catch (RemoteException e) {
+        } catch (Throwable e) {
             throw new RuntimeException("无法打开网络统计服务", e);
         }
     }
@@ -103,7 +99,7 @@ public class TrafficStatsHelper {
                     return entry.rxBytes + entry.txBytes;
                 }
             }
-        } catch (RemoteException e) {
+        } catch (Throwable e) {
             e.printStackTrace();
         }
         return 0L;
@@ -151,7 +147,7 @@ public class TrafficStatsHelper {
                 entry = stats.getValues(i, entry);
                 total += entry.rxBytes + entry.txBytes;
             }
-        } catch (RemoteException e) {
+        } catch (Throwable e) {
             e.printStackTrace();
         }
         return total;
@@ -164,7 +160,7 @@ public class TrafficStatsHelper {
         try {
             ApplicationInfo info = mContext.getPackageManager().getApplicationInfo(packageName, 0);
             return info.uid;
-        } catch (PackageManager.NameNotFoundException e) {
+        } catch (Throwable e) {
             e.printStackTrace();
             return -1;
         }

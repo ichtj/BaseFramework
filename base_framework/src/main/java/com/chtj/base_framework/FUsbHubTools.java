@@ -1,91 +1,310 @@
 package com.chtj.base_framework;
 
 import android.content.Context;
-import android.os.Build;
-import android.os.storage.DiskInfo;
-import android.os.storage.StorageManager;
-import android.os.storage.VolumeInfo;
+import android.hardware.usb.UsbDevice;
+import android.hardware.usb.UsbManager;
+import android.text.TextUtils;
+import android.view.InputDevice;
 
-import com.chtj.base_framework.entity.EhciInfo;
-
+import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileFilter;
+import java.io.FileReader;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class FUsbHubTools {
-    private static final String TAG = "FUsbHubTools";
+    private static final String TAG = FUsbHubTools.class.getSimpleName();
+    public static List<UsbDeviceInfo> getAllConnectedUsbDevices(Context context) {
+        List<UsbDeviceInfo> result = new ArrayList<UsbDeviceInfo>();
 
-    /**
-     * 获取usbhub中的usb设备信息
-     *
-     * @return
-     */
-    public static List<EhciInfo> getUsbInfo() {
-        List<EhciInfo> ehciInfoList = new ArrayList<>();
-        int sdk = Build.VERSION.SDK_INT;
-        //先获取usb设备的路径信息 用于遍历出来里面的设备 因为存在多个usbhub
-        List<String> searchPathList = new ArrayList<>();
-        String rootPath = "/sys/devices/platform/";
-        File file = new File(rootPath);
-        File[] files = file.listFiles();
-        Pattern patternFirst = null;
-        Pattern rkPattern1 = Pattern.compile("ff[0-9]*.usb");//填写正则表达式 ff500000.usb
-        Pattern freeScalePattern1 = Pattern.compile("[a-z]*-ehci.1");//填写正则表达式 fsl-ehci.1
-        Pattern pattern = Pattern.compile("[0-9]-[0-9]");//填写正则表达式 n-n
-        Pattern pattern2 = Pattern.compile("[0-9]-[0-9](.\\d+)?");//填写正则表达式 一级hub
-        Pattern pattern3 = Pattern.compile("[0-9]-[0-9].[0-9](.\\d+)?");//填写正则表达式 二级hub|[0-9]-[0-9].[0-9]:[0-9](.\d+)?
-        if (sdk >= 24) { patternFirst = rkPattern1; } else { patternFirst = freeScalePattern1; }
+        addUsbManagerDevices(context, result);
+        addInputDevices(result);
+        addSysUsbDevices(result);
+
+        return result;
+    }
+
+    private static void addUsbManagerDevices(Context context, List<UsbDeviceInfo> result) {
+        if (context == null) {
+            return;
+        }
+
+        UsbManager usbManager = (UsbManager) context.getSystemService(Context.USB_SERVICE);
+        if (usbManager == null) {
+            return;
+        }
+
+        HashMap<String, UsbDevice> deviceMap = usbManager.getDeviceList();
+        if (deviceMap == null || deviceMap.isEmpty()) {
+            return;
+        }
+
+        for (UsbDevice device : deviceMap.values()) {
+            if (device == null) {
+                continue;
+            }
+
+            UsbDeviceInfo info = findByVidPid(result, device.getVendorId(), device.getProductId());
+            if (info == null) {
+                info = new UsbDeviceInfo();
+                result.add(info);
+            }
+
+            info.fromUsbManager = true;
+            info.usbDeviceName = device.getDeviceName();
+            info.deviceId = device.getDeviceId();
+            info.vendorId = device.getVendorId();
+            info.productId = device.getProductId();
+            info.deviceClass = device.getDeviceClass();
+            info.deviceSubclass = device.getDeviceSubclass();
+            info.deviceProtocol = device.getDeviceProtocol();
+            info.manufacturerName = choose(info.manufacturerName, device.getManufacturerName());
+            info.productName = choose(info.productName, device.getProductName());
+            info.version = choose(info.version, device.getVersion());
+            info.configurationCount = device.getConfigurationCount();
+            info.interfaceCount = device.getInterfaceCount();
+        }
+    }
+
+    private static void addInputDevices(List<UsbDeviceInfo> result) {
+        int[] ids = InputDevice.getDeviceIds();
+        if (ids == null || ids.length == 0) {
+            return;
+        }
+
+        for (int i = 0; i < ids.length; i++) {
+            InputDevice device = InputDevice.getDevice(ids[i]);
+            if (device == null) {
+                continue;
+            }
+
+            if (!device.isExternal()) {
+                continue;
+            }
+
+            UsbDeviceInfo info = findByVidPid(result, device.getVendorId(), device.getProductId());
+            if (info == null) {
+                info = new UsbDeviceInfo();
+                result.add(info);
+            }
+
+            info.fromInputDevice = true;
+            info.inputDeviceId = device.getId();
+            info.inputName = choose(info.inputName, device.getName());
+            info.descriptor = choose(info.descriptor, device.getDescriptor());
+            info.vendorId = chooseInt(info.vendorId, device.getVendorId());
+            info.productId = chooseInt(info.productId, device.getProductId());
+            info.sources = device.getSources();
+            info.inputType = getInputType(device);
+        }
+    }
+
+    private static void addSysUsbDevices(List<UsbDeviceInfo> result) {
+        File root = new File("/sys/bus/usb/devices");
+        File[] files = root.listFiles();
+        if (files == null || files.length == 0) {
+            return;
+        }
+
         for (int i = 0; i < files.length; i++) {
-            if (patternFirst.matcher(files[i].getName()).matches()) {
-                File[] ehciFileInfo = files[i].listFiles();
-                for (int j = 0; j < ehciFileInfo.length; j++) {
-                    if (ehciFileInfo[j].getName().indexOf("usb1") != -1 || ehciFileInfo[j].getName().indexOf("usb2") != -1) {
-                        File[] usbNumInfo = ehciFileInfo[j].listFiles();
-                        for (int k = 0; k < usbNumInfo.length; k++) {
-                            Matcher match = pattern.matcher(usbNumInfo[k].getName());//2-1
-                            boolean isExist = match.matches();
-                            if (isExist) {
-                                File[] usbInfo = usbNumInfo[k].listFiles();
-                                for (int l = 0; l < usbInfo.length; l++) {
-                                    if (pattern2.matcher(usbInfo[l].getName()).matches()) {//2-1.7
-                                        boolean levelTwohasData = false;
-                                        //得到改文件夹中目录
-                                        File[] level2Info = usbInfo[l].listFiles();
-                                        if (level2Info != null && level2Info.length > 0) {
-                                            //便利文件夹中的目录文件内容
-                                            for (int m = 0; m < level2Info.length; m++) {
-                                                //判断是否存在我们需要的设备信息 找到规则2-1.7.2
-                                                Matcher match3 = pattern3.matcher(level2Info[m].getName());
-                                                boolean isExist3 = match3.matches();
-                                                if (isExist3) {
-                                                    if (levelTwohasData == false) {
-                                                        levelTwohasData = true;
-                                                    }
-                                                    searchPathList.add(level2Info[m].getAbsolutePath());
-                                                }
-                                            }
-                                        }
-                                        searchPathList.add(usbInfo[l].getAbsolutePath());
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+            File dir = files[i];
+            if (dir == null || !dir.isDirectory()) {
+                continue;
+            }
+
+            String dirName = dir.getName();
+
+            if (dirName.indexOf(':') >= 0) {
+                continue;
+            }
+
+            String idVendor = readTrim(new File(dir, "idVendor"));
+            String idProduct = readTrim(new File(dir, "idProduct"));
+
+            if (TextUtils.isEmpty(idVendor) || TextUtils.isEmpty(idProduct)) {
+                continue;
+            }
+
+            int vendorId = parseHex(idVendor);
+            int productId = parseHex(idProduct);
+
+            UsbDeviceInfo info = findByVidPid(result, vendorId, productId);
+            if (info == null) {
+                info = new UsbDeviceInfo();
+                result.add(info);
+            }
+
+            info.fromSysfs = true;
+            info.sysfsPath = dir.getAbsolutePath();
+            info.usbBusPath = dirName;
+            info.vendorId = chooseInt(info.vendorId, vendorId);
+            info.productId = chooseInt(info.productId, productId);
+            info.manufacturerName = choose(info.manufacturerName, readTrim(new File(dir, "manufacturer")));
+            info.productName = choose(info.productName, readTrim(new File(dir, "product")));
+            info.serialNumber = choose(info.serialNumber, readTrim(new File(dir, "serial")));
+            info.busNumber = parseDec(readTrim(new File(dir, "busnum")));
+            info.deviceNumber = parseDec(readTrim(new File(dir, "devnum")));
+            info.usbDeviceClass = readTrim(new File(dir, "bDeviceClass"));
+            info.usbDeviceSubclass = readTrim(new File(dir, "bDeviceSubClass"));
+            info.usbDeviceProtocol = readTrim(new File(dir, "bDeviceProtocol"));
+        }
+    }
+
+    private static UsbDeviceInfo findByVidPid(List<UsbDeviceInfo> list, int vendorId, int productId) {
+        if (vendorId == 0 && productId == 0) {
+            return null;
+        }
+
+        for (int i = 0; i < list.size(); i++) {
+            UsbDeviceInfo info = list.get(i);
+            if (info.vendorId == vendorId && info.productId == productId) {
+                return info;
             }
         }
-        if (searchPathList != null && searchPathList.size() > 0) {
-            for (int i = 0; i < searchPathList.size(); i++) {
-                FCmdTools.CommandResult commandResult1 = FCmdTools.execCommand("cat " + searchPathList.get(i) + "/product", true);
-                FCmdTools.CommandResult commandResult2 = FCmdTools.execCommand("cat " + searchPathList.get(i) + "/manufacturer", true);
-                if (commandResult1.result == 0 && commandResult2.result == 0 && commandResult1.successMsg.indexOf("Android") == -1 && commandResult2.successMsg.indexOf("Android") == -1) {
-                    ehciInfoList.add(new EhciInfo(commandResult1.successMsg, commandResult2.successMsg, searchPathList.get(i)));
+
+        return null;
+    }
+
+    private static String getInputType(InputDevice device) {
+        int sources = device.getSources();
+
+        if ((sources & InputDevice.SOURCE_MOUSE) == InputDevice.SOURCE_MOUSE) {
+            return "MOUSE";
+        }
+
+        if ((sources & InputDevice.SOURCE_KEYBOARD) == InputDevice.SOURCE_KEYBOARD) {
+            return "KEYBOARD";
+        }
+
+        if ((sources & InputDevice.SOURCE_TOUCHPAD) == InputDevice.SOURCE_TOUCHPAD) {
+            return "TOUCHPAD";
+        }
+
+        if ((sources & InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK) {
+            return "JOYSTICK";
+        }
+
+        if ((sources & InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD) {
+            return "GAMEPAD";
+        }
+
+        return "UNKNOWN";
+    }
+
+    private static String readTrim(File file) {
+        BufferedReader reader = null;
+        try {
+            if (file == null || !file.exists()) {
+                return null;
+            }
+
+            reader = new BufferedReader(new FileReader(file));
+            String line = reader.readLine();
+            if (line == null) {
+                return null;
+            }
+
+            return line.trim();
+        } catch (Exception e) {
+            return null;
+        } finally {
+            try {
+                if (reader != null) {
+                    reader.close();
                 }
+            } catch (Exception ignored) {
             }
         }
-        return ehciInfoList;
+    }
+
+    private static int parseHex(String value) {
+        try {
+            return Integer.parseInt(value, 16);
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    private static int parseDec(String value) {
+        try {
+            return Integer.parseInt(value);
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    private static String choose(String oldValue, String newValue) {
+        if (!TextUtils.isEmpty(oldValue)) {
+            return oldValue;
+        }
+        return newValue;
+    }
+
+    private static int chooseInt(int oldValue, int newValue) {
+        if (oldValue != 0) {
+            return oldValue;
+        }
+        return newValue;
+    }
+
+    public static final class UsbDeviceInfo {
+        public boolean fromUsbManager;
+        public boolean fromInputDevice;
+        public boolean fromSysfs;
+
+        public String usbDeviceName;
+        public int deviceId;
+
+        public int vendorId;
+        public int productId;
+
+        public int deviceClass;
+        public int deviceSubclass;
+        public int deviceProtocol;
+
+        public String manufacturerName;
+        public String productName;
+        public String version;
+        public String serialNumber;
+
+        public int configurationCount;
+        public int interfaceCount;
+
+        public int inputDeviceId;
+        public String inputName;
+        public String descriptor;
+        public int sources;
+        public String inputType;
+
+        public String sysfsPath;
+        public String usbBusPath;
+        public int busNumber;
+        public int deviceNumber;
+        public String usbDeviceClass;
+        public String usbDeviceSubclass;
+        public String usbDeviceProtocol;
+
+        @Override
+        public String toString() {
+            return "UsbDeviceInfo{"
+                    + "fromUsbManager=" + fromUsbManager
+                    + ", fromInputDevice=" + fromInputDevice
+                    + ", fromSysfs=" + fromSysfs
+                    + ", usbDeviceName='" + usbDeviceName + '\''
+                    + ", inputName='" + inputName + '\''
+                    + ", manufacturerName='" + manufacturerName + '\''
+                    + ", productName='" + productName + '\''
+                    + ", vendorId=" + vendorId
+                    + ", productId=" + productId
+                    + ", vendorIdHex='" + Integer.toHexString(vendorId) + '\''
+                    + ", productIdHex='" + Integer.toHexString(productId) + '\''
+                    + ", inputType='" + inputType + '\''
+                    + ", usbBusPath='" + usbBusPath + '\''
+                    + ", sysfsPath='" + sysfsPath + '\''
+                    + ", busNumber=" + busNumber
+                    + ", deviceNumber=" + deviceNumber
+                    + '}';
+        }
     }
 }

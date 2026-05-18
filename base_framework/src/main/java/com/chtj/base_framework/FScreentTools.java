@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Matrix;
+import android.graphics.Rect;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Display;
@@ -21,140 +22,134 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Locale;
 
 /**
- * 屏幕相关
+ * Screen related tools.
  */
 public class FScreentTools {
     private static final String TAG = "ScreentShotUtil";
 
-    private static final String CLASS1_NAME = "android.view.SurfaceControl";
-
-    private static final String CLASS2_NAME = "android.view.Surface";
-
-    private static final String METHOD_NAME = "screenshot";
-
+    private static final String CLASS_SURFACE_CONTROL = "android.view.SurfaceControl";
+    private static final String CLASS_SURFACE = "android.view.Surface";
+    private static final String METHOD_SCREENSHOT = "screenshot";
+    private static final String SCREEN_CAP_BIN = "/system/bin/screencap";
 
     /**
-     * 截屏
-     * 默认保存在sdcard目录下
+     * Take a screenshot and save it under /sdcard.
      *
-     * @return 文件存放路径
+     * @return screenshot path, or empty string if failed
      */
     public static String takeScreenshot() {
         return takeScreenshot("");
     }
 
     /**
-     * 截屏
+     * Take a screenshot and save it to the specified path.
      *
-     * @param fileFullPath 路径+文件名
-     * <p>
-     * 例如：/sdcard/local/20201515.png
+     * @param fileFullPath full output path, for example /sdcard/local/20201515.png
+     * @return screenshot path, or empty string if failed
      */
     public static String takeScreenshot(String fileFullPath) {
-        SimpleDateFormat format = new SimpleDateFormat("yyyyMMddHHmmss");
-        String fileName = format.format(new Date(System.currentTimeMillis())) + ".png";
-        if (FCmdTools.isRoot() || FCmdTools.execCommand("mount -o rw,remount -t ext4 /system", true).result == 0) {
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
-                if (fileFullPath.equals("")) {
-                    fileFullPath = "/sdcard/" + fileName;
-                    return FCmdTools.execCommand("/system/bin/screencap -p " + fileFullPath, true).result == 0?fileFullPath:"";
-                }else{
-                    //这里是用户自定义了一个文件具体路径
-                    return FCmdTools.execCommand("/system/bin/screencap -p " + fileFullPath, true).result == 0?fileFullPath:"";
-                }
-            }
-        } else {
-            if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.JELLY_BEAN_MR2 && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
-                WindowManager wm = (WindowManager) FBaseTools.getContext().getSystemService(Context.WINDOW_SERVICE);
-                Display mDisplay = wm.getDefaultDisplay();
-                Matrix mDisplayMatrix = new Matrix();
-                DisplayMetrics mDisplayMetrics = new DisplayMetrics();
-                // We need to orient the screenshot correctly (and the Surface api seems to take screenshots
-                // only in the natural orientation of the device :!)
-                mDisplay.getRealMetrics(mDisplayMetrics);
-                float[] dims = {mDisplayMetrics.widthPixels, mDisplayMetrics.heightPixels};
-                float degrees = getDegreesForRotation(mDisplay.getRotation());
-                boolean requiresRotation = (degrees > 0);
-                if (requiresRotation) {
-                    // Get the dimensions of the device in its native orientation
-                    mDisplayMatrix.reset();
-                    mDisplayMatrix.preRotate(-degrees);
-                    mDisplayMatrix.mapPoints(dims);
-                    dims[0] = Math.abs(dims[0]);
-                    dims[1] = Math.abs(dims[1]);
-                }
+        if (fileFullPath == null || fileFullPath.length() == 0) {
+            fileFullPath = buildDefaultScreenshotPath();
+        }
 
-                Bitmap mScreenBitmap = screenShot((int) dims[0], (int) dims[1]);
-                if (requiresRotation) {
-                    // Rotate the screenshot to the current orientation
-                    Bitmap ss = Bitmap.createBitmap(mDisplayMetrics.widthPixels, mDisplayMetrics.heightPixels,
-                            Bitmap.Config.ARGB_8888);
-                    Canvas c = new Canvas(ss);
-                    c.translate(ss.getWidth() / 2, ss.getHeight() / 2);
-                    c.rotate(degrees);
-                    c.translate(-dims[0] / 2, -dims[1] / 2);
-                    c.drawBitmap(mScreenBitmap, 0, 0, null);
-                    c.setBitmap(null);
-                    mScreenBitmap = ss;
-                    if (ss != null && !ss.isRecycled()) {
-                        ss.recycle();
-                    }
-                }
-                // If we couldn't take the screenshot, notify the user
-                if (mScreenBitmap == null) {
-                    return "";
-                }
-                // Optimizations
-                mScreenBitmap.setHasAlpha(false);
-                mScreenBitmap.prepareToDraw();
-                if (fileFullPath.equals("")) {
-                    fileFullPath = "/sdcard/" + fileName;
-                }
-                saveBitmap2file(mScreenBitmap, fileFullPath);
-            }
-            return fileFullPath;
+        File outFile = new File(fileFullPath);
+        ensureParentDir(outFile);
+
+        Bitmap bitmap = takeScreenshotBitmap();
+        if (bitmap != null && saveBitmap2file(bitmap, outFile.getAbsolutePath())) {
+            return outFile.getAbsolutePath();
+        }
+
+        // Final fallback for builds where hidden screenshot APIs are changed or blocked.
+        if (takeScreenshotByCommand(outFile, false) || takeScreenshotByCommand(outFile, true)) {
+            return outFile.exists() && outFile.length() > 0 ? outFile.getAbsolutePath() : "";
         }
         return "";
     }
 
+    /**
+     * Take a screenshot and return a Bitmap.
+     *
+     * <p>Android 4.4.2+ does not provide a public no-prompt full-screen capture API
+     * for normal third-party apps. This method is intended for system/privileged apps
+     * or rooted devices.</p>
+     */
+    public static Bitmap takeScreenshotBitmap() {
+        WindowManager wm = (WindowManager) FBaseTools.getContext().getSystemService(Context.WINDOW_SERVICE);
+        if (wm == null) {
+            return null;
+        }
+
+        Display display = wm.getDefaultDisplay();
+        DisplayMetrics displayMetrics = new DisplayMetrics();
+        display.getRealMetrics(displayMetrics);
+
+        Matrix displayMatrix = new Matrix();
+        float[] dims = {displayMetrics.widthPixels, displayMetrics.heightPixels};
+        float degrees = getDegreesForRotation(display.getRotation());
+        boolean requiresRotation = degrees > 0;
+        if (requiresRotation) {
+            displayMatrix.reset();
+            displayMatrix.preRotate(-degrees);
+            displayMatrix.mapPoints(dims);
+            dims[0] = Math.abs(dims[0]);
+            dims[1] = Math.abs(dims[1]);
+        }
+
+        Bitmap screenBitmap = screenShot((int) dims[0], (int) dims[1]);
+        if (screenBitmap == null) {
+            return null;
+        }
+
+        if (requiresRotation) {
+            Bitmap rotatedBitmap = Bitmap.createBitmap(displayMetrics.widthPixels,
+                    displayMetrics.heightPixels, Bitmap.Config.ARGB_8888);
+            Canvas canvas = new Canvas(rotatedBitmap);
+            canvas.translate(rotatedBitmap.getWidth() / 2f, rotatedBitmap.getHeight() / 2f);
+            canvas.rotate(degrees);
+            canvas.translate(-dims[0] / 2f, -dims[1] / 2f);
+            canvas.drawBitmap(screenBitmap, 0, 0, null);
+            canvas.setBitmap(null);
+            screenBitmap.recycle();
+            screenBitmap = rotatedBitmap;
+        }
+
+        screenBitmap.setHasAlpha(false);
+        screenBitmap.prepareToDraw();
+        return screenBitmap;
+    }
 
     /**
-     * 保存
-     * @param bmp
-     * @param fileName
+     * Save bitmap as PNG.
+     *
+     * @return true if saved successfully
      */
-    public static void saveBitmap2file(Bitmap bmp, String fileName) {
-        int quality = 100;
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        bmp.compress(Bitmap.CompressFormat.PNG, quality, baos);
-        InputStream is = new ByteArrayInputStream(baos.toByteArray());
-        byte[] buffer = new byte[1024];
-        int len = 0;
-        File file = new File(fileName);
-        if (!file.exists()) {
-            try {
-                file.getParentFile().mkdir();
-                file.getParentFile().createNewFile();
-            } catch (IOException e) {
-                Log.e(TAG, e.toString());
-            }
-        } else {
-            try {
-                file.getParentFile().delete();
-                file.getParentFile().createNewFile();
-            } catch (IOException e) {
-                Log.e(TAG, e.toString());
-            }
+    public static boolean saveBitmap2file(Bitmap bmp, String fileName) {
+        if (bmp == null || bmp.isRecycled() || fileName == null || fileName.length() == 0) {
+            return false;
         }
+
+        File file = new File(fileName);
+        ensureParentDir(file);
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        InputStream is = null;
         FileOutputStream stream = null;
         try {
+            bmp.compress(Bitmap.CompressFormat.PNG, 100, baos);
+            is = new ByteArrayInputStream(baos.toByteArray());
             stream = new FileOutputStream(file);
+
+            byte[] buffer = new byte[4096];
+            int len;
             while ((len = is.read(buffer)) != -1) {
                 stream.write(buffer, 0, len);
             }
             stream.flush();
+            return file.exists() && file.length() > 0;
         } catch (FileNotFoundException e) {
             Log.i(TAG, e.toString());
         } catch (IOException e) {
@@ -174,15 +169,13 @@ public class FScreentTools {
                     Log.i(TAG, e.toString());
                 }
             }
+            if (bmp != null && !bmp.isRecycled()) {
+                bmp.recycle();
+            }
         }
-        if (bmp != null && !bmp.isRecycled()) {
-            bmp.recycle();
-        }
+        return false;
     }
 
-    /**
-     * 旋转角度
-     */
     private static float getDegreesForRotation(int value) {
         switch (value) {
             case Surface.ROTATION_90:
@@ -191,26 +184,34 @@ public class FScreentTools {
                 return 360f - 180f;
             case Surface.ROTATION_270:
                 return 360f - 270f;
+            default:
+                return 0f;
         }
-        return 0f;
     }
 
     private static Bitmap screenShot(int width, int height) {
         Log.i(TAG, "android.os.Build.VERSION.SDK : " + android.os.Build.VERSION.SDK_INT);
-        Class<?> surfaceClass = null;
-        Method method = null;
         try {
             Log.i(TAG, "width : " + width);
             Log.i(TAG, "height : " + height);
+            Class<?> surfaceClass;
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN_MR2) {
-
-                surfaceClass = Class.forName(CLASS1_NAME);
+                surfaceClass = Class.forName(CLASS_SURFACE_CONTROL);
             } else {
-                surfaceClass = Class.forName(CLASS2_NAME);
+                surfaceClass = Class.forName(CLASS_SURFACE);
             }
-            method = surfaceClass.getDeclaredMethod(METHOD_NAME, int.class, int.class);
-            method.setAccessible(true);
-            return (Bitmap) method.invoke(null, width, height);
+
+            try {
+                Method method = surfaceClass.getDeclaredMethod(METHOD_SCREENSHOT, int.class, int.class);
+                method.setAccessible(true);
+                return (Bitmap) method.invoke(null, width, height);
+            } catch (NoSuchMethodException ignored) {
+                Method method = surfaceClass.getDeclaredMethod(METHOD_SCREENSHOT,
+                        Rect.class, int.class, int.class, int.class);
+                method.setAccessible(true);
+                return (Bitmap) method.invoke(null, new Rect(0, 0, width, height),
+                        width, height, Surface.ROTATION_0);
+            }
         } catch (NoSuchMethodException e) {
             Log.e(TAG, e.toString());
         } catch (IllegalArgumentException e) {
@@ -225,4 +226,30 @@ public class FScreentTools {
         return null;
     }
 
+    private static String buildDefaultScreenshotPath() {
+        SimpleDateFormat format = new SimpleDateFormat("yyyyMMddHHmmss", Locale.US);
+        String fileName = format.format(new Date(System.currentTimeMillis())) + ".png";
+        return "/sdcard/" + fileName;
+    }
+
+    private static boolean takeScreenshotByCommand(File outFile, boolean root) {
+        String cmd = SCREEN_CAP_BIN + " -p " + shellQuote(outFile.getAbsolutePath());
+        FCmdTools.CommandResult result = FCmdTools.execCommand(cmd, root);
+        if (result.result != 0) {
+            Log.w(TAG, "screencap failed, root=" + root + ", err=" + result.errorMsg);
+            return false;
+        }
+        return outFile.exists() && outFile.length() > 0;
+    }
+
+    private static void ensureParentDir(File file) {
+        File parentFile = file.getParentFile();
+        if (parentFile != null && !parentFile.exists() && !parentFile.mkdirs()) {
+            Log.w(TAG, "create parent dir failed: " + parentFile.getAbsolutePath());
+        }
+    }
+
+    private static String shellQuote(String value) {
+        return "'" + value.replace("'", "'\\''") + "'";
+    }
 }

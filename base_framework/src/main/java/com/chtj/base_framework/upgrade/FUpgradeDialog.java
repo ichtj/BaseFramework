@@ -16,6 +16,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.chtj.base_framework.FBaseTools;
+import com.chtj.base_framework.FUtils;
 import com.chtj.base_framework.R;
 import com.chtj.base_framework.entity.UpgradeBean;
 
@@ -29,10 +30,13 @@ public class FUpgradeDialog {
     private boolean isShow=false;
     private String otaPath;
     private ProgressBar progressBar;
+    private TextView tvFwPath;
     private TextView tvResult;
+    private TextView tvFwVersionRemarks;
     private static final int TASK_WARNING = 0x1001;
     private static final int TASK_ERR = 0x1002;
     private static final int TASK_PROGRESS = 0x1003;
+    private static final int TASK_FW_VERSION = 0x1004;
 
     Handler mHandler = new Handler() {
         @SuppressLint("HandlerLeak")
@@ -43,12 +47,12 @@ public class FUpgradeDialog {
                 case TASK_PROGRESS:
                     tvResult.setTextColor(Color.GRAY);
                     int installStatus = Integer.parseInt(msg.obj.toString());
-                    if (installStatus == FExtras.I_CHECK) {
+                    if (installStatus == FExtras.I_COPY) {
                         progressBar.setProgress(20);
-                        tvResult.setText(R.string.status_check_firmware);
-                    } else if (installStatus == FExtras.I_COPY) {
-                        progressBar.setProgress(60);
                         tvResult.setText(R.string.status_start_copefw);
+                    }else if (installStatus == FExtras.I_CHECK) {
+                        progressBar.setProgress(60);
+                        tvResult.setText(R.string.status_check_firmware);
                     } else if (installStatus == FExtras.I_INSTALLING) {
                         progressBar.setProgress(100);
                         tvResult.setText(R.string.status_start_writefw);
@@ -60,7 +64,10 @@ public class FUpgradeDialog {
                     break;
                 case TASK_ERR:
                     tvResult.setTextColor(Color.RED);
-                    tvResult.setText(String.format(FBaseTools.getContext().getString(R.string.status_update_fail),msg.obj.toString()));
+                    tvResult.setText(FBaseTools.getContext().getString(R.string.status_update_fail,msg.obj.toString()));
+                    break;
+                case TASK_FW_VERSION:
+                    tvFwVersionRemarks.setText(FBaseTools.getContext().getString(R.string.fw_version_remarks, FUtils.sysFwVersion(),msg.obj.toString()));
                     break;
             }
         }
@@ -89,7 +96,6 @@ public class FUpgradeDialog {
             AlertDialog.Builder builder = new AlertDialog.Builder(context);
             View pbView = LayoutInflater.from(context).inflate(R.layout.view_alert, null);
             builder.setTitle(R.string.dialog_title);
-            builder.setMessage(String.format(context.getString(R.string.dialog_chek_otapath),instance().otaPath));
             builder.setNegativeButton(R.string.dialog_cancel, new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
@@ -108,8 +114,13 @@ public class FUpgradeDialog {
             fDialog.dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_SYSTEM_ALERT);
             fDialog.dialog.show();
             fDialog.dialog.setCanceledOnTouchOutside(true);
+            fDialog.tvFwVersionRemarks = fDialog.dialog.findViewById(R.id.tvFwVersionRemarks);
+            fDialog.tvFwPath = fDialog.dialog.findViewById(R.id.tvFwPath);
             fDialog.progressBar = fDialog.dialog.findViewById(R.id.pbView);
             fDialog.tvResult = fDialog.dialog.findViewById(R.id.tvResult);
+            String loadVersionStr=context.getString(R.string.loadding_check_version);
+            fDialog.tvFwVersionRemarks.setText(context.getString(R.string.fw_version_remarks,FUtils.sysFwVersion(),loadVersionStr));
+            fDialog.tvFwPath.setText(context.getString(R.string.dialog_chek_otapath,instance().otaPath));
             fDialog.dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -133,6 +144,11 @@ public class FUpgradeDialog {
                         public void warning(String warning) {
                             Log.d(TAG, "warning:warning = " + warning);
                             instance().mHandler.sendMessage(instance().mHandler.obtainMessage(TASK_WARNING,warning));
+                        }
+
+                        @Override
+                        public void upFwVersion(String version) {
+                            instance().mHandler.sendMessage(instance().mHandler.obtainMessage(TASK_FW_VERSION,version));
                         }
                     }));
                 }

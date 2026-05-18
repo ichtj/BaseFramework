@@ -5,6 +5,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
 
+import com.chtj.base_framework.FUtils;
+
 public class FUpgradeReceiver extends BroadcastReceiver {
     private static final String TAG = FUpgradeReceiver.class.getSimpleName();
     private static IUpgrade anInterface;
@@ -17,7 +19,7 @@ public class FUpgradeReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         String action = intent.getAction();
         Log.d(TAG, "onReceive: action=" + action);
-        if (!FUpgradeTools.isEmpty(action)) {
+        if (!FUtils.isEmpty(action)) {
             switch (action) {
                 case Intent.ACTION_BOOT_COMPLETED://开机完成
                     FUpgradeService.startServie(context);

@@ -30,6 +30,7 @@ android {
 dependencies {
     compileOnly files('libs\\rk3288.jar')
     compileOnly files('libs\\fc5330.jar')
+    compileOnly files('libs\\rk3568.jar')
     testImplementation 'junit:junit:4.+'
     //network
     //rxjava

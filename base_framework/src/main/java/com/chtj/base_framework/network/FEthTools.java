@@ -1,323 +1,522 @@
 package com.chtj.base_framework.network;
 
 import android.content.Context;
-import android.net.IpConfiguration;
-import android.net.LinkAddress;
-import android.net.NetworkUtils;
-import android.net.StaticIpConfiguration;
-import android.net.ethernet.EthernetDevInfo;
-import android.net.ethernet.EthernetManager;
 import android.os.Build;
 import android.util.Log;
 
-import com.chtj.base_framework.FBaseTools;
-import com.chtj.base_framework.FCmdTools;
-import com.chtj.base_framework.FCommonTools;
-import com.chtj.base_framework.entity.CommonValue;
-import com.chtj.base_framework.entity.IpConfigInfo;
-
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileReader;
-import java.net.Inet4Address;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.net.InetAddress;
-import java.util.regex.Pattern;
+import java.util.ArrayList;
 
 public class FEthTools {
-    private static final String TAG = "EthManagerUtils";
+    private static final String TAG = "FAllEthTools";
 
     /**
-     * 开启以太网
-     */
-    public static void openEth() {
-        try {
-            int sdk = Build.VERSION.SDK_INT;
-            if (sdk >= 24) {
-                android.net.EthernetManager mEthManager = (android.net.EthernetManager) FBaseTools.getContext().getSystemService("ethernet");
-                mEthManager.setEthernetEnabled(true);
-            } else {
-                android.net.ethernet.EthernetManager ethernetManager = EthernetManager.getInstance();
-                ethernetManager.setEnabled(true);
-            }
-        }catch (Throwable throwable){
-            Log.e(TAG, "openEth: ", throwable);
-        }
-    }
-
-    /**
-     * 关闭以太网
-     */
-    public static void closeEth() {
-        try {
-            int sdk = Build.VERSION.SDK_INT;
-            if (sdk >= 24) {
-                android.net.EthernetManager mEthManager = (android.net.EthernetManager) FBaseTools.getContext().getSystemService("ethernet");
-                mEthManager.setEthernetEnabled(false);
-            } else {
-                android.net.ethernet.EthernetManager ethernetManager = EthernetManager.getInstance();
-                ethernetManager.setEnabled(false);
-            }
-        }catch (Throwable throwable){
-            Log.e(TAG, "closeEth: ", throwable);
-        }
-    }
-
-
-    /**
-     * 获取ip模式
-     */
-    public static String getIpMode(Context context) {
-        try {
-            String ipMode = "NONE";
-            int sdk = Build.VERSION.SDK_INT;
-            if (sdk >= 24) {
-                android.net.EthernetManager mEthManager = (android.net.EthernetManager) context.getSystemService("ethernet");
-                boolean useDhcp = (mEthManager.getConfiguration().ipAssignment == IpConfiguration.IpAssignment.DHCP) ? true : false;
-                boolean useStatic = (mEthManager.getConfiguration().ipAssignment == IpConfiguration.IpAssignment.STATIC) ? true : false;
-                boolean usePppoe = (mEthManager.getConfiguration().ipAssignment == IpConfiguration.IpAssignment.PPPOE) ? true : false;
-                boolean useUnassigned = (mEthManager.getConfiguration().ipAssignment == IpConfiguration.IpAssignment.UNASSIGNED) ? true : false;
-                if (useDhcp) {
-                    ipMode = "DHCP";
-                } else if (useStatic) {
-                    ipMode = "STATIC";
-                } else if (usePppoe) {
-                    ipMode = "PPPOE";
-                } else if (useUnassigned) {
-                    ipMode = "UNASSIGNED";
-                } else {
-                    ipMode = "NONE";
-                }
-            } else {
-                android.net.ethernet.EthernetManager ethernetManager = EthernetManager.getInstance();
-                boolean isDhcp = ethernetManager.isDhcp();
-                ipMode=isDhcp ? "DHCP" : "STATIC";
-            }
-            return ipMode;
-        }catch (Throwable throwable){
-            return "NONE";
-        }
-    }
-
-    /**
-     * 设置静态IP参数
-     *
-     * @param ipConfigInfo
-     */
-    public static CommonValue setStaticIp(IpConfigInfo ipConfigInfo) {
-        if (checkIp(ipConfigInfo)) {
-            int sdk = Build.VERSION.SDK_INT;
-            if (sdk >= 24) {
-                return setEthStaticRk(ipConfigInfo);
-            } else {
-                return setEthStaticFc(ipConfigInfo);
-            }
-        } else {
-            return CommonValue.ETH_IPCHECK_ERR;
-        }
-    }
-
-    /**
-     * 检查ip地址输入是否合法
-     *
-     * @param ipConfigInfo
+     * 获取静态
+     * @param context
      * @return
      */
-    private static boolean checkIp(IpConfigInfo ipConfigInfo) {
-        boolean ipCheck = FCommonTools.matchesIp(ipConfigInfo.getIp());
-        boolean dns1Check = FCommonTools.matchesIp(ipConfigInfo.getDns1());
-        boolean dns2Check = FCommonTools.matchesIp(ipConfigInfo.getDns2());
-        boolean gateWaycheck = FCommonTools.matchesIp(ipConfigInfo.getGateWay());
-        boolean maskCheck = FCommonTools.matchesIp(ipConfigInfo.getMask());
-        return ipCheck && dns1Check && dns2Check && gateWaycheck && maskCheck;
+    public static boolean isEthernetStatic(Context context) {
+        try {
+            Object ethManager = context.getSystemService("ethernet");
+            if (ethManager == null) {
+                return false;
+            }
+
+            String[] ifaces = (String[]) ethManager.getClass()
+                    .getMethod("getAvailableInterfaces")
+                    .invoke(ethManager);
+
+            if (ifaces == null || ifaces.length == 0) {
+                return false;
+            }
+
+            Object ipConfig = ethManager.getClass()
+                    .getMethod("getConfiguration", String.class)
+                    .invoke(ethManager, ifaces[0]);
+
+            String mode = getIpAssignmentMode(ipConfig);
+            return "STATIC".equals(mode);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
     }
 
     /**
-     * RK3288设置静态IP
-     *
-     * @param ipConfigInfo
+     * 获取dhcp
+     * @param context
+     * @return
      */
-    private static CommonValue setEthStaticRk(IpConfigInfo ipConfigInfo) {
-        android.net.EthernetManager mEthManager = (android.net.EthernetManager) FBaseTools.getContext().getSystemService("ethernet");
-        String ipAddr = ipConfigInfo.getIp();
-        String gateway = ipConfigInfo.getGateWay();
-        String netMask = ipConfigInfo.getMask();
-        String dns1 = ipConfigInfo.getDns1();
-        String dns2 = ipConfigInfo.getDns2();
-        //int network_prefix_length = 24;
-
-        StaticIpConfiguration mStaticIpConfiguration = new StaticIpConfiguration();
-        /*
-         * get ip address, netmask,dns ,gw etc.
-         */
-        Inet4Address inetAddr = getIPv4Address(ipAddr);
-        int prefixLength = maskStr2InetMask(netMask);
-        InetAddress gatewayAddr = getIPv4Address(gateway);
-        InetAddress dnsAddr = getIPv4Address(dns1);
-
-        if (inetAddr.getAddress().toString().isEmpty() || prefixLength == 0 || gatewayAddr.toString().isEmpty()
-                || dnsAddr.toString().isEmpty()) {
-            return CommonValue.ETH_PARAMS_ERR;
-        }
-        String dnsStr2 = dns2;
+    public static boolean isEthernetDhcp(Context context) {
         try {
-            Class[] classes = new Class[]{InetAddress.class, int.class};
-            Class<?> linkAddressClass = Class
-                    .forName("android.net.LinkAddress");
-            mStaticIpConfiguration.ipAddress = (LinkAddress) linkAddressClass
-                    .getDeclaredConstructor(classes).newInstance(inetAddr, prefixLength);
-
-
-            mStaticIpConfiguration.gateway = gatewayAddr;
-            mStaticIpConfiguration.dnsServers.add(dnsAddr);
-
-            if (!dnsStr2.isEmpty()) {
-                mStaticIpConfiguration.dnsServers.add(getIPv4Address(dnsStr2));
+            Object ethManager = context.getSystemService("ethernet");
+            if (ethManager == null) {
+                return false;
             }
-            IpConfiguration mIpConfiguration = new IpConfiguration(IpConfiguration.IpAssignment.STATIC, IpConfiguration.ProxySettings.NONE, mStaticIpConfiguration, null);
-            mEthManager.setConfiguration(mIpConfiguration);
+
+            String[] ifaces = (String[]) ethManager.getClass()
+                    .getMethod("getAvailableInterfaces")
+                    .invoke(ethManager);
+
+            if (ifaces == null || ifaces.length == 0) {
+                return false;
+            }
+
+            Object ipConfig = ethManager.getClass()
+                    .getMethod("getConfiguration", String.class)
+                    .invoke(ethManager, ifaces[0]);
+
+            String mode = getIpAssignmentMode(ipConfig);
+            return "DHCP".equals(mode) || "UNASSIGNED".equals(mode);
         } catch (Exception e) {
-            return CommonValue.ETH_SECURITY_ERR;
+            e.printStackTrace();
+            return false;
         }
-        return CommonValue.EXEU_COMPLETE;
     }
 
-
-    /*
-     * convert subMask string to prefix length
+    /**
+     * 设置静态IP
+     * @param context
+     * @param iface
+     * @param ip
+     * @param prefix
+     * @param gateway
+     * @param dns
+     * @param dns2
+     * @return
      */
-    private static int maskStr2InetMask(String maskStr) {
-        StringBuffer sb;
-        String str;
-        int inetmask = 0;
-        int count = 0;
-        /*
-         * check the subMask format
-         */
-        Pattern pattern = Pattern.compile("(^((\\d|[01]?\\d\\d|2[0-4]\\d|25[0-5])\\.){3}(\\d|[01]?\\d\\d|2[0-4]\\d|25[0-5])$)|^(\\d|[1-2]\\d|3[0-2])$");
-        if (pattern.matcher(maskStr).matches() == false) {
-            return 0;
-        }
-
-        String[] ipSegment = maskStr.split("\\.");
-        for (int n = 0; n < ipSegment.length; n++) {
-            sb = new StringBuffer(Integer.toBinaryString(Integer.parseInt(ipSegment[n])));
-            str = sb.reverse().toString();
-            count = 0;
-            for (int i = 0; i < str.length(); i++) {
-                i = str.indexOf("1", i);
-                if (i == -1)
-                    break;
-                count++;
+    public static boolean setEthernetStatic(
+            Context context,
+            String iface,
+            String ip,
+            int prefix,
+            String gateway,
+            String dns,
+            String dns2) {
+        try {
+            Object ethernetManager = context.getSystemService("ethernet");
+            if (ethernetManager == null) {
+                Log.e(TAG, "setEthernetStatic failed: ethernet service is null");
+                return false;
             }
-            inetmask += count;
+
+            Class<?> ethernetManagerClass = Class.forName("android.net.EthernetManager");
+            Class<?> staticIpConfigClass = Class.forName("android.net.StaticIpConfiguration");
+            Class<?> linkAddressClass = Class.forName("android.net.LinkAddress");
+            Class<?> ipConfigClass = Class.forName("android.net.IpConfiguration");
+
+            Constructor<?> linkAddressCtor;
+            try {
+                linkAddressCtor = linkAddressClass.getConstructor(InetAddress.class, int.class);
+            } catch (NoSuchMethodException e) {
+                linkAddressCtor = linkAddressClass.getDeclaredConstructor(InetAddress.class, int.class);
+                linkAddressCtor.setAccessible(true);
+            }
+
+            Object linkAddress = linkAddressCtor.newInstance(InetAddress.getByName(ip), prefix);
+
+            ArrayList<InetAddress> dnsList = new ArrayList<>();
+            if (dns != null && dns.length() > 0) {
+                dnsList.add(InetAddress.getByName(dns));
+            }
+            if (dns2 != null && dns2.length() > 0) {
+                dnsList.add(InetAddress.getByName(dns2));
+            }
+
+            Object staticIpConfig;
+            try {
+                Class<?> staticBuilderClass =
+                        Class.forName("android.net.StaticIpConfiguration$Builder");
+                Object staticBuilder = staticBuilderClass.getConstructor().newInstance();
+
+                staticBuilderClass.getMethod("setIpAddress", linkAddressClass)
+                        .invoke(staticBuilder, linkAddress);
+                staticBuilderClass.getMethod("setGateway", InetAddress.class)
+                        .invoke(staticBuilder, InetAddress.getByName(gateway));
+                staticBuilderClass.getMethod("setDnsServers", Iterable.class)
+                        .invoke(staticBuilder, dnsList);
+
+                staticIpConfig = staticBuilderClass.getMethod("build").invoke(staticBuilder);
+            } catch (Throwable builderError) {
+                staticIpConfig = staticIpConfigClass.getConstructor().newInstance();
+
+                Field ipAddressField = staticIpConfigClass.getField("ipAddress");
+                ipAddressField.set(staticIpConfig, linkAddress);
+
+                Field gatewayField = staticIpConfigClass.getField("gateway");
+                gatewayField.set(staticIpConfig, InetAddress.getByName(gateway));
+
+                Field dnsServersField = staticIpConfigClass.getField("dnsServers");
+                @SuppressWarnings("unchecked")
+                ArrayList<InetAddress> oldDnsList =
+                        (ArrayList<InetAddress>) dnsServersField.get(staticIpConfig);
+                oldDnsList.clear();
+                oldDnsList.addAll(dnsList);
+            }
+
+            Object ipConfig;
+            try {
+                Class<?> ipBuilderClass = Class.forName("android.net.IpConfiguration$Builder");
+                Object ipBuilder = ipBuilderClass.getConstructor().newInstance();
+
+                ipBuilderClass.getMethod("setStaticIpConfiguration", staticIpConfigClass)
+                        .invoke(ipBuilder, staticIpConfig);
+
+                ipConfig = ipBuilderClass.getMethod("build").invoke(ipBuilder);
+            } catch (Throwable builderError) {
+                Class<?> ipAssignmentEnum =
+                        Class.forName("android.net.IpConfiguration$IpAssignment");
+                Class<?> proxySettingsEnum =
+                        Class.forName("android.net.IpConfiguration$ProxySettings");
+
+                Object ipAssignmentStatic =
+                        Enum.valueOf((Class<Enum>) ipAssignmentEnum, "STATIC");
+                Object proxyNone =
+                        Enum.valueOf((Class<Enum>) proxySettingsEnum, "NONE");
+
+                try {
+                    Constructor<?> ipConfigCtor = ipConfigClass.getConstructor(
+                            ipAssignmentEnum,
+                            proxySettingsEnum,
+                            staticIpConfigClass,
+                            Class.forName("android.net.ProxyInfo")
+                    );
+                    ipConfig = ipConfigCtor.newInstance(
+                            ipAssignmentStatic,
+                            proxyNone,
+                            staticIpConfig,
+                            null
+                    );
+                } catch (Throwable ctorError) {
+                    ipConfig = ipConfigClass.getConstructor().newInstance();
+
+                    try {
+                        ipConfigClass.getMethod("setIpAssignment", ipAssignmentEnum)
+                                .invoke(ipConfig, ipAssignmentStatic);
+                    } catch (Throwable e) {
+                        Field ipAssignmentField = ipConfigClass.getField("ipAssignment");
+                        ipAssignmentField.set(ipConfig, ipAssignmentStatic);
+                    }
+
+                    try {
+                        ipConfigClass.getMethod("setProxySettings", proxySettingsEnum)
+                                .invoke(ipConfig, proxyNone);
+                    } catch (Throwable e) {
+                        Field proxySettingsField = ipConfigClass.getField("proxySettings");
+                        proxySettingsField.set(ipConfig, proxyNone);
+                    }
+
+                    try {
+                        ipConfigClass.getMethod("setStaticIpConfiguration", staticIpConfigClass)
+                                .invoke(ipConfig, staticIpConfig);
+                    } catch (Throwable e) {
+                        Field staticIpConfigField = ipConfigClass.getField("staticIpConfiguration");
+                        staticIpConfigField.set(ipConfig, staticIpConfig);
+                    }
+                }
+            }
+
+            if (Build.VERSION.SDK_INT >= 33) {
+                try {
+                    Class<?> requestClass =
+                            Class.forName("android.net.EthernetNetworkUpdateRequest");
+                    Class<?> requestBuilderClass =
+                            Class.forName("android.net.EthernetNetworkUpdateRequest$Builder");
+
+                    Object requestBuilder = requestBuilderClass.getConstructor().newInstance();
+                    requestBuilderClass.getMethod("setIpConfiguration", ipConfigClass)
+                            .invoke(requestBuilder, ipConfig);
+
+                    Object request = requestBuilderClass.getMethod("build").invoke(requestBuilder);
+
+                    Method updateConfigurationMethod = ethernetManagerClass.getMethod(
+                            "updateConfiguration",
+                            String.class,
+                            requestClass,
+                            java.util.concurrent.Executor.class,
+                            Class.forName("android.os.OutcomeReceiver")
+                    );
+
+                    updateConfigurationMethod.invoke(
+                            ethernetManager,
+                            iface,
+                            request,
+                            null,
+                            null
+                    );
+
+                    Log.i(TAG, "Static IP set for " + iface + " by updateConfiguration");
+                    return true;
+                } catch (Throwable e) {
+                    Log.w(TAG, "updateConfiguration failed, fallback to setConfiguration", e);
+                }
+            }
+
+            Method setConfigMethod = ethernetManagerClass.getMethod(
+                    "setConfiguration",
+                    String.class,
+                    ipConfigClass
+            );
+
+            setConfigMethod.invoke(ethernetManager, iface, ipConfig);
+
+            Log.i(TAG, "Static IP set for " + iface + " by setConfiguration");
+            return true;
+        } catch (Throwable t) {
+            Log.e(TAG, "setEthernetStatic failed", t);
+            return false;
         }
-        return inetmask;
     }
 
-    private static Inet4Address getIPv4Address(String text) {
+    /**
+     * 设置动态IP
+     * @param context
+     * @param iface
+     */
+    public static boolean setEthDhcp(Context context, String iface) {
         try {
-            return (Inet4Address) NetworkUtils.numericToInetAddress(text);
-        } catch (IllegalArgumentException | ClassCastException e) {
+            Object ethernetManager = context.getSystemService("ethernet");
+            if (ethernetManager == null) {
+                Log.e(TAG, "setEthernetDhcp failed: ethernet service is null");
+                return false;
+            }
+
+            Class<?> ethernetManagerClass = Class.forName("android.net.EthernetManager");
+            Class<?> ipConfigClass = Class.forName("android.net.IpConfiguration");
+
+            Object ipConfiguration;
+            try {
+                Class<?> builderClass = Class.forName("android.net.IpConfiguration$Builder");
+                Object builder = builderClass.getConstructor().newInstance();
+                Method buildMethod = builderClass.getMethod("build");
+                ipConfiguration = buildMethod.invoke(builder);
+            } catch (Throwable builderError) {
+                Class<?> ipAssignmentClass =
+                        Class.forName("android.net.IpConfiguration$IpAssignment");
+                Class<?> proxySettingsClass =
+                        Class.forName("android.net.IpConfiguration$ProxySettings");
+
+                Object dhcp = Enum.valueOf((Class<Enum>) ipAssignmentClass, "DHCP");
+                Object none = Enum.valueOf((Class<Enum>) proxySettingsClass, "NONE");
+
+                ipConfiguration = ipConfigClass.getConstructor().newInstance();
+
+                try {
+                    Method setIpAssignmentMethod =
+                            ipConfigClass.getMethod("setIpAssignment", ipAssignmentClass);
+                    setIpAssignmentMethod.invoke(ipConfiguration, dhcp);
+                } catch (Throwable e) {
+                    Field ipAssignmentField = ipConfigClass.getField("ipAssignment");
+                    ipAssignmentField.set(ipConfiguration, dhcp);
+                }
+
+                try {
+                    Method setProxySettingsMethod =
+                            ipConfigClass.getMethod("setProxySettings", proxySettingsClass);
+                    setProxySettingsMethod.invoke(ipConfiguration, none);
+                } catch (Throwable e) {
+                    Field proxySettingsField = ipConfigClass.getField("proxySettings");
+                    proxySettingsField.set(ipConfiguration, none);
+                }
+            }
+
+            if (Build.VERSION.SDK_INT >= 33) {
+                try {
+                    Class<?> requestClass =
+                            Class.forName("android.net.EthernetNetworkUpdateRequest");
+                    Class<?> requestBuilderClass =
+                            Class.forName("android.net.EthernetNetworkUpdateRequest$Builder");
+
+                    Object requestBuilder = requestBuilderClass.getConstructor().newInstance();
+
+                    Method setIpConfigurationMethod =
+                            requestBuilderClass.getMethod("setIpConfiguration", ipConfigClass);
+                    setIpConfigurationMethod.invoke(requestBuilder, ipConfiguration);
+
+                    Method buildRequestMethod = requestBuilderClass.getMethod("build");
+                    Object request = buildRequestMethod.invoke(requestBuilder);
+
+                    Class<?> outcomeReceiverClass = Class.forName("android.os.OutcomeReceiver");
+
+                    Method updateConfigurationMethod =
+                            ethernetManagerClass.getMethod(
+                                    "updateConfiguration",
+                                    String.class,
+                                    requestClass,
+                                    java.util.concurrent.Executor.class,
+                                    outcomeReceiverClass
+                            );
+
+                    updateConfigurationMethod.invoke(
+                            ethernetManager,
+                            iface,
+                            request,
+                            null,
+                            null
+                    );
+
+                    Log.i(TAG, "DHCP enabled for " + iface + " by updateConfiguration");
+                    return true;
+                } catch (Throwable e) {
+                    Log.w(TAG, "updateConfiguration failed, fallback to setConfiguration", e);
+                }
+            }
+
+            Method setConfigMethod =
+                    ethernetManagerClass.getMethod(
+                            "setConfiguration",
+                            String.class,
+                            ipConfigClass
+                    );
+
+            setConfigMethod.invoke(ethernetManager, iface, ipConfiguration);
+
+            Log.i(TAG, "DHCP enabled for " + iface + " by setConfiguration");
+            return true;
+        } catch (Throwable e) {
+            Log.e(TAG, "setEthernetDhcp failed", e);
+            return false;
+        }
+    }
+
+    /**
+     * 检测以太网是否连接
+     */
+    public static boolean isEthernetCablePlugged(Context context) {
+        String iface = getFirstEthernetIface(context);
+        if (iface == null || iface.length() == 0) {
+            iface = "eth0";
+        }
+
+        File carrierFile = new File("/sys/class/net/" + iface + "/carrier");
+        BufferedReader reader = null;
+        try {
+            reader = new BufferedReader(new FileReader(carrierFile));
+            String value = reader.readLine();
+            return "1".equals(value);
+        } catch (Exception e) {
+            Log.e(TAG, "read carrier failed, iface=" + iface, e);
+            return false;
+        } finally {
+            try {
+                if (reader != null) {
+                    reader.close();
+                }
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
+    /**
+     * 启用以太网
+     */
+    public static boolean enableEthernet(Context context) {
+        return setEthernetEnabled(context, true);
+    }
+
+    /**
+     * 停用以太网
+     */
+    public static boolean disableEthernet(Context context) {
+        return setEthernetEnabled(context, false);
+    }
+
+    private static boolean setEthernetEnabled(Context context, boolean enabled) {
+        try {
+            Object ethernetManager = context.getSystemService("ethernet");
+            if (ethernetManager != null) {
+                try {
+                    Method method = ethernetManager.getClass()
+                            .getMethod("setEthernetEnabled", boolean.class);
+                    method.invoke(ethernetManager, enabled);
+                    return true;
+                } catch (NoSuchMethodException e) {
+                    Log.w(TAG, "setEthernetEnabled is not supported by EthernetManager, fallback to NetworkManagementService");
+                }
+            }
+
+            String iface = getFirstEthernetIface(context);
+            if (iface == null || iface.length() == 0) {
+                iface = "eth0";
+            }
+
+            // Android 11 原生 EthernetManager 没有 setEthernetEnabled，使用 network_management 控制网口 up/down。
+            Class<?> serviceManagerClass = Class.forName("android.os.ServiceManager");
+            Method getServiceMethod = serviceManagerClass.getMethod("getService", String.class);
+            Object binder = getServiceMethod.invoke(null, "network_management");
+            if (binder == null) {
+                Log.e(TAG, "setEthernetEnabled failed: network_management service is null");
+                return false;
+            }
+
+            Class<?> iBinderClass = Class.forName("android.os.IBinder");
+            Class<?> nmStubClass = Class.forName("android.os.INetworkManagementService$Stub");
+            Method asInterfaceMethod = nmStubClass.getMethod("asInterface", iBinderClass);
+            Object networkManagementService = asInterfaceMethod.invoke(null, binder);
+            if (networkManagementService == null) {
+                Log.e(TAG, "setEthernetEnabled failed: INetworkManagementService is null");
+                return false;
+            }
+
+            Method method;
+            if (enabled) {
+                method = networkManagementService.getClass()
+                        .getMethod("setInterfaceUp", String.class);
+            } else {
+                method = networkManagementService.getClass()
+                        .getMethod("setInterfaceDown", String.class);
+            }
+
+            method.invoke(networkManagementService, iface);
+            Log.i(TAG, "setEthernetEnabled success, enabled=" + enabled + ", iface=" + iface);
+            return true;
+        } catch (Exception e) {
+            Log.e(TAG, "setEthernetEnabled failed, enabled=" + enabled, e);
+            return false;
+        }
+    }
+
+    private static String getFirstEthernetIface(Context context) {
+        try {
+            Object ethernetManager = context.getSystemService("ethernet");
+            if (ethernetManager == null) {
+                return null;
+            }
+
+            Method method = ethernetManager.getClass()
+                    .getMethod("getAvailableInterfaces");
+            String[] ifaces = (String[]) method.invoke(ethernetManager);
+
+            if (ifaces != null && ifaces.length > 0) {
+                return ifaces[0];
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "getFirstEthernetIface failed", e);
+        }
+        return null;
+    }
+
+    public static String getIpAssignmentMode(Object ipConfig) throws Exception {
+        if (ipConfig == null) {
             return null;
         }
-    }
 
-    /**
-     * 设置以太网为DHCP
-     */
-    public static CommonValue setEthDhcp() {
-        int sdk = Build.VERSION.SDK_INT;
-        if (sdk >= 24) {
-            try {
-                android.net.EthernetManager ethernetManager = (android.net.EthernetManager) FBaseTools.getContext().getSystemService("ethernet");
-                ethernetManager.setConfiguration(new IpConfiguration(IpConfiguration.IpAssignment.DHCP, IpConfiguration.ProxySettings.NONE, null, null));
-                return CommonValue.EXEU_COMPLETE;
-            } catch (SecurityException e) {
-                return CommonValue.ETH_SECURITY_ERR;
-            }
-        } else {
-            try {
-                //动态 关闭 再打开
-                //先关闭以太网 再打开以太网
-                EthernetManager ethernetManager = EthernetManager.getInstance();
-                EthernetDevInfo mDevInfo = ethernetManager.getSavedConfig();
-                String hwaddr = "00:00:00:00:00:00";
-                try {
-                    hwaddr = loadFileAsString("/sys/class/net/eth0/address").toUpperCase().substring(0, 17);
-                } catch (Exception e) {
-                }
-                mDevInfo.setHwaddr(hwaddr);
-                mDevInfo.setConnectMode(EthernetDevInfo.ETHERNET_CONN_MODE_DHCP);
-                ethernetManager.updateDevInfo(mDevInfo);
-                ethernetManager.setEnabled(true);
-                return CommonValue.EXEU_COMPLETE;
-            } catch (SecurityException e) {
-                return CommonValue.ETH_SECURITY_ERR;
-            }
-        }
-    }
-
-
-    /**
-     * 设置以太网为静态模式
-     */
-    private static CommonValue setEthStaticFc(IpConfigInfo ipConfigInfo) {
         try {
-            EthernetManager ethernetManager = EthernetManager.getInstance();
-            EthernetDevInfo mDevInfo = ethernetManager.getSavedConfig();
-            String hwaddr = "00:00:00:00:00:00";
-            try {
-                hwaddr = loadFileAsString("/sys/class/net/eth0/address").toUpperCase().substring(0, 17);
-            } catch (Exception e) {
-            }
-            mDevInfo.setHwaddr(hwaddr);
-            mDevInfo.setIpAddress(ipConfigInfo.getIp());
-            mDevInfo.setNetMask(ipConfigInfo.getMask());
-            mDevInfo.setDns1Addr(ipConfigInfo.getDns1());
-            mDevInfo.setDns2Addr(ipConfigInfo.getDns2());
-            mDevInfo.setGateWay(ipConfigInfo.getGateWay());
-            mDevInfo.setConnectMode(EthernetDevInfo.ETHERNET_CONN_MODE_MANUAL);
-            ethernetManager.updateDevInfo(mDevInfo);
-            ethernetManager.setEnabled(true);
-            return CommonValue.EXEU_COMPLETE;
-        } catch (SecurityException e) {
-            return CommonValue.ETH_SECURITY_ERR;
+            Object ipAssignment = ipConfig.getClass()
+                    .getMethod("getIpAssignment")
+                    .invoke(ipConfig);
+            return String.valueOf(ipAssignment);
+        } catch (NoSuchMethodException e) {
+            // 兼容部分定制系统隐藏 getter 的情况，Android 11 源码中字段名为 ipAssignment。
+            Field ipAssignmentField = ipConfig.getClass().getField("ipAssignment");
+            Object ipAssignment = ipAssignmentField.get(ipConfig);
+            return String.valueOf(ipAssignment);
         }
     }
-
-
-    /**
-     * 获取eth物理地址
-     *
-     * @param filePath
-     * @return
-     * @throws java.io.IOException
-     */
-    private static String loadFileAsString(String filePath) throws java.io.IOException {
-        StringBuffer fileData = new StringBuffer(1000);
-        BufferedReader reader = new BufferedReader(new FileReader(filePath));
-        char[] buf = new char[1024];
-        int numRead = 0;
-        while ((numRead = reader.read(buf)) != -1) {
-            String readData = String.valueOf(buf, 0, numRead);
-            fileData.append(readData);
-        }
-        reader.close();
-        return fileData.toString();
-    }
-
-
-    /**
-     * 判断网线拔插状态
-     * 通过命令cat /sys/class/net/eth0/carrier，如果插有网线的话，读取到的值是1，否则为0
-     *
-     * @return 是否插入网线
-     */
-    public static boolean isCablePluggedIn() {
-        FCmdTools.CommandResult fResult = FCmdTools.execCommand("cat /sys/class/net/eth0/carrier", true);
-        if (fResult.result == 0 && fResult.successMsg.trim().equals("1")) {  //有网线插入时返回1，拔出时返回0
-            return true;
-        }
-        return false;
-    }
-
 }
